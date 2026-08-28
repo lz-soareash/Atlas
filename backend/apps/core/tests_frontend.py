@@ -21,7 +21,9 @@ class FrontendServeTests(TestCase):
     def test_static_files_exist(self):
         from pathlib import Path
 
-        base = Path(__file__).resolve().parent.parent.parent / "static" / "atlas"
+        # Frontend separado em <repo>/frontend/static/atlas.
+        backend = Path(__file__).resolve().parent.parent.parent
+        base = backend.parent / "frontend" / "static" / "atlas"
         self.assertTrue((base / "css" / "app.css").exists())
         self.assertTrue((base / "js" / "app.js").exists())
         self.assertTrue((base / "js" / "api.js").exists())
@@ -31,3 +33,6 @@ class FrontendServeTests(TestCase):
         self.assertTrue((base / "js" / "pages" / "auth.js").exists())
         self.assertTrue((base / "js" / "pages" / "app.js").exists())
         self.assertTrue((base / "js" / "pages" / "assistant.js").exists())
+        self.assertTrue((base / "js" / "pages" / "entities.js").exists())
+        self.assertTrue((base / "js" / "pages" / "settings.js").exists())
+        self.assertTrue((backend.parent / "frontend" / "templates" / "atlas" / "index.html").exists())

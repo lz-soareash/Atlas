@@ -15,4 +15,13 @@ urlpatterns = [
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Aplicações
     path("api/accounts/", include("apps.accounts.urls")),
+    # Fase 2 — Knowledge Core
+    path("api/", include("apps.knowledge.urls")),
+    path("api/", include("apps.ideas.urls")),
+    path("api/", include("apps.projects.urls")),
+    path("api/", include("apps.questions.urls")),
+    path("api/", include("apps.decisions.urls")),
+    path("api/", include("apps.experiences.urls")),
+    # Dashboard (visão agregada)
+    path("api/", include("apps.dashboard.urls")),
 ]

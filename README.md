@@ -27,21 +27,30 @@ atlas/
 │   │   ├── accounts/      # FASE 1: User, JWT, permissões, throttling
 │   │   ├── core/          # Modelos base (UUID, timestamps, soft delete, owner)
 │   │   ├── audit/         # Auditoria (AuditLog) com redação de secrets
-│   │   └── assistant/     # Interface AIProvider (contrato) — FASE 5+
-│   ├── templates/atlas/   # index.html (frontend servido pelo Django)
-│   ├── static/atlas/      # CSS e JS puro do frontend (SDA leve por hash)
+│   │   ├── assistant/     # Interface AIProvider (contrato) — FASE 5+
+│   │   ├── knowledge/     # FASE 2: Conhecimentos
+│   │   ├── ideas/         # FASE 2: Ideias (→ Projetos)
+│   │   ├── projects/      # FASE 2: Projetos
+│   │   ├── questions/     # FASE 2: Perguntas (→ Conhecimentos)
+│   │   ├── decisions/     # FASE 2: Decisões
+│   │   ├── experiences/   # FASE 2: Experiências
+│   │   └── dashboard/     # FASE 2: visão agregada (contagens + recentes)
 │   ├── manage.py
 │   └── pyproject.toml
+├── frontend/
+│   ├── templates/atlas/   # index.html (frontend servido pelo Django)
+│   └── static/atlas/      # CSS e JS puro do frontend (SPA leve por hash)
 ├── docs/
 ├── docker-compose.yml     # postgres(pgvector) + backend (servindo tudo)
 ├── .env.example
 └── README.md
 ```
 
-O frontend é um SPA em JavaScript puro com rotas por hash (`#/conhecimentos`,
-`#/assistente`, ...), consumindo a API na mesma origem (`/api`). Módulos JS
-organizados em `static/atlas/js/`: `api.js`, `auth.js`, `router.js`,
-`helpers.js`, `pages/*.js` e `app.js`.
+O frontend fica separado em `frontend/` e é servido pelo próprio Django (mesma
+origem). É um SPA em JavaScript puro com rotas por hash (`#/conhecimentos`,
+`#/assistente`, ...), consumindo a API em `/api`. Módulos JS em
+`frontend/static/atlas/js/`: `api.js`, `auth.js`, `router.js`, `helpers.js`,
+`pages/*.js` e `app.js`.
 
 ## Como rodar (desenvolvimento)
 
@@ -73,6 +82,27 @@ python manage.py runserver
 - Frontend em HTML/CSS/JS puro (servido pelo Django, SPA por hash) com shell
   de navegação, autenticação, token refresh e interface do Assistant.
 - Testes de autenticação, segurança, soft delete e frontend (20 testes verdes).
+
+**FASE 2 — KNOWLEDGE CORE** implementada e testada:
+
+- Seis entidades (Knowledge, Ideas, Projects, Questions, Decisions,
+  Experiences) com CRUD completo, permissões por owner (anti-IDOR) e soft
+  delete, sempre isoladas por usuário.
+- Transformações registradas: Ideia → Projeto e Pergunta → Conhecimento.
+- Modelo base `KnowledgeEntity` + `OwnerModelViewSet`/`OwnerModelSerializer`
+  reutilizados por todas as entidades.
+- Migrações aplicadas e 76 testes verdes no total.
+- Frontend com páginas funcionais de listar/criar/excluir cada entidade e
+  ações de conversão/ resposta onde aplicável.
+
+**Dashboard e Configurações** implementados:
+
+- `GET /api/dashboard/` com contagens, total e atividade recente do usuário.
+- Dashboard real no frontend (cards navegáveis + recentes).
+- Configurações: edição de perfil, dados da conta e preferências do Assistant
+  (local por enquanto).
+
+Status de testes: **81 verdes**.
 
 ## Documentação
 

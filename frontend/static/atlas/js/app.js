@@ -7,7 +7,9 @@ import { setLayout, setRoutes, navigate, currentRoute, render } from "./router.j
 
 import { loginView, registerView } from "./pages/auth.js";
 import { dashboardView, MODULES, placeholderView, notFoundView } from "./pages/app.js";
+import { entityView, ENTITY_CONFIGS } from "./pages/entities.js";
 import { assistantView } from "./pages/assistant.js";
+import { settingsView } from "./pages/settings.js";
 
 // Itens da barra lateral.
 const NAV_ITEMS = [
@@ -48,6 +50,12 @@ function defineRoutes() {
     ...MODULES.map((m) => {
       if (m.key === "assistente") {
         return { path: m.path, key: m.key, auth: true, view: assistantView };
+      }
+      if (m.key === "configuracoes") {
+        return { path: m.path, key: m.key, auth: true, view: settingsView };
+      }
+      if (ENTITY_CONFIGS[m.key]) {
+        return { path: m.path, key: m.key, auth: true, view: () => entityView(m) };
       }
       return { path: m.path, key: m.key, auth: true, view: () => placeholderView(m) };
     }),

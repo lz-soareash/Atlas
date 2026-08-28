@@ -44,6 +44,7 @@ O backend é modular, com apps Django sob `backend/apps/`:
 | `questions`   | 2    | Perguntas                                         |
 | `decisions`   | 2    | Decisões                                          |
 | `experiences` | 2    | Experiências                                      |
+| `dashboard`   | 2    | Visão agregada (contagens + recentes por usuário) |
 | `relationships` | 3  | Relacionamentos genéricos + grafo                 |
 | `versions`    | 4/22 | Versionamento da evolução do conhecimento        |
 | `search`      | 4    | Busca híbrida (textual + semântica)               |
@@ -62,12 +63,13 @@ exclusivamente no backend.
 
 ## Frontend
 
-O frontend é **HTML, CSS e JavaScript puro**, servido pelo próprio Django a
-partir de `backend/templates/atlas/` (página) e `backend/static/atlas/`
-(estilos e scripts). É um SPA leve com roteamento por hash
-(`#/conhecimentos`, `#/assistente`, ...), sem framework e sem build step.
+O frontend fica **separado do backend** em `frontend/`, mas é **HTML, CSS e
+JavaScript puro**, servido pelo próprio Django a partir de
+`frontend/templates/atlas/` (página) e `frontend/static/atlas/` (estilos e
+scripts). É um SPA leve com roteamento por hash (`#/conhecimentos`,
+`#/assistente`, ...), sem framework e sem build step.
 
-Módulos JS (`static/atlas/js/`):
+Módulos JS (`frontend/static/atlas/js/`):
 
 - `api.js` — cliente HTTP com JWT e refresh automático.
 - `auth.js` — estado de sessão (login/registro/logout, usuário atual).

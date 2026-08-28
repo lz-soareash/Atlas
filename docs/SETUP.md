@@ -36,10 +36,10 @@ python manage.py runserver
 
 ## 2. Frontend
 
-O frontend é **HTML, CSS e JavaScript puro**, servido pelo próprio Django a
-partir de `backend/templates/atlas/` e `backend/static/atlas/`. Não há build
-step nem dependências de biblioteca. Basta o backend em execução — nenhuma
-instalação adicional é necessária.
+O frontend fica **separado do backend** em `frontend/`, mas é servido pelo
+próprio Django a partir de `frontend/templates/atlas/` e
+`frontend/static/atlas/`. Não há build step nem dependências de biblioteca.
+Basta o backend em execução — nenhuma instalação adicional é necessária.
 
 ## 3. Produção (Docker + PostgreSQL + pgvector)
 

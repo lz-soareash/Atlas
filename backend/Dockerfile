@@ -10,10 +10,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Build context é a raiz do repositório (backend/ + frontend/).
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY . .
+COPY backend/ /app/
+# Frontend separado do backend; <repo>/frontend é montado em /frontend
+# (FRONTEND_DIR = BASE_DIR.parent/frontend = /frontend).
+COPY frontend/ /frontend/
 
 EXPOSE 8000
 

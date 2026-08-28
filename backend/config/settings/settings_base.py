@@ -65,6 +65,15 @@ LOCAL_APPS = [
     "apps.accounts",
     "apps.audit",
     "apps.core",
+    # Fase 2 — Knowledge Core
+    "apps.knowledge",
+    "apps.ideas",
+    "apps.projects",
+    "apps.questions",
+    "apps.decisions",
+    "apps.experiences",
+    # Dashboard / visão agregada
+    "apps.dashboard",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -82,10 +91,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+# Frontend separado do backend em <repo>/frontend (servido pelo Django).
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [FRONTEND_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -192,8 +204,9 @@ USE_TZ = True
 # --- Estáticos / mídia ---
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-# Diretório de estáticos da aplicação Atlas (CSS/JS servidos sem build step).
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# Diretório de estáticos da aplicação Atlas (CSS/JS servidos sem build step),
+# agora em <repo>/frontend/static.
+STATICFILES_DIRS = [FRONTEND_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

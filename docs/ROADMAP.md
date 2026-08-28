@@ -5,18 +5,20 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 ## FASE 1 — FOUNDATION ✅ (implementada)
 - [x] Django + estruturas de settings (`base`/`local`/`production`)
 - [x] PostgreSQL (+ pgvector) e SQLite local configuráveis
-- [x] Docker Compose (db com pgvector, backend, frontend)
+- [x] Docker Compose (db com pgvector, backend)
 - [x] JWT (SimpleJWT): registro, login, refresh, `/me`
 - [x] `accounts` (User por e-mail, UUID), throttling, permissões
 - [x] `core` (modelos base: UUID, timestamps, soft delete, owner)
 - [x] `audit` (AuditLog + redação de secrets)
-- [x] Frontend React/Vite/TS (shell, rotas, auth, token refresh)
-- [x] Testes (auth, segurança, soft delete)
+- [x] Frontend HTML/CSS/JS puro servido pelo Django (SPA por hash)
+- [x] Testes (auth, segurança, soft delete) — 20 verdes
 
-## FASE 2 — KNOWLEDGE CORE
-- Entidades: Knowledge, Ideas, Projects, Questions, Decisions, Experiences
-- CRUD, permissões por owner, soft delete, histórico de transformações
-  (Ideia → Projeto, Pergunta → Conhecimento)
+## FASE 2 — KNOWLEDGE CORE ✅ (implementada)
+- [x] Entidades: Knowledge, Ideas, Projects, Questions, Decisions, Experiences
+- [x] CRUD, permissões por owner, soft delete, histórico de transformações
+      (Ideia → Projeto, Pergunta → Conhecimento)
+- [x] Migrações + 56 novos testes (total 76 verdes)
+- [x] Frontend: páginas de listagem/criação por entidade
 
 ## FASE 3 — RELATIONSHIPS E GRAFO
 - Relacionamentos genéricos (tipos configuráveis) + API `{nodes, edges}`

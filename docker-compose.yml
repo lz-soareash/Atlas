@@ -20,11 +20,13 @@ services:
   # ===== Backend Django (API + frontend HTML/CSS/JS) =====
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: atlas_backend
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app
+      - ./frontend:/frontend
     environment:
       DJANGO_ENV: development
       DB_ENGINE: postgres

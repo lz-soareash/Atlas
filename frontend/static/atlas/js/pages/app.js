@@ -1,8 +1,9 @@
-// Páginas principais do aplicativo (Dashboard e módulos do Knowledge Core).
-// Os módulos ainda serão implementados nas próximas fases; por ora exibem
-// um cartão placeholder claro.
+// Páginas principais do aplicativo (Dashboard).
+// O Dashboard consome GET /api/dashboard/ para mostrar contagens e recentes.
 import { getUser } from "../auth.js";
+import { api } from "../api.js";
 import { esc } from "../helpers.js";
+import { navigate } from "../router.js";
 
 export function dashboardView() {
   const user = getUser();
@@ -10,10 +11,55 @@ export function dashboardView() {
     html: `
       <header class="page-header">
         <h1>Olá, ${esc(user?.first_name || user?.email || "")}</h1>
-        <span class="badge">Fase 1</span>
+        <span class="badge">Dashboard</span>
       </header>
-      <p class="muted">Seu Knowledge Operating System. Os módulos chegam nas próximas fases.</p>
+      <div class="stat-grid" data-counts>
+        <p class="muted">Carregando…</p>
+      </div>
+      <h2 class="section-title">Atividade recente</h2>
+      <div class="recent-list" data-recent>
+        <p class="muted">Carregando…</p>
+      </div>
     `,
+    async mount({ container }) {
+      const countsEl = container.querySelector("[data-counts]");
+      const recentEl = container.querySelector("[data-recent]");
+      const res = await api.get("/dashboard/");
+      if (!res.ok) {
+        countsEl.innerHTML = `<p class="muted">Não foi possível carregar o dashboard.</p>`;
+        return;
+      }
+      const { counts, recent } = res.data;
+
+      countsEl.innerHTML = counts
+        .map(
+          (c) => `
+            <a class="stat-card" href="#${c.route}" onclick="location.hash='#${c.route}'">
+              <div class="stat-value">${c.count}</div>
+              <div class="stat-label">${esc(c.label)}</div>
+            </a>
+          `
+        )
+        .join("");
+
+      recentEl.innerHTML = recent.length
+        ? recent
+            .map(
+              (r) => `
+                <a class="recent-item" data-route="${r.route}">
+                  <span class="recent-tag">${esc(r.label)}</span>
+                  <span class="recent-title">${esc(r.title)}</span>
+                  <span class="recent-status">${esc(r.status || "")}</span>
+                </a>
+              `
+            )
+            .join("")
+        : `<p class="muted">Nenhuma atividade ainda. Comece criando um conhecimento, uma ideia, um projeto…</p>`;
+
+      recentEl.querySelectorAll("[data-route]").forEach((el) => {
+        el.addEventListener("click", () => navigate(el.dataset.route));
+      });
+    },
   };
 }
 

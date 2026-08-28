@@ -37,23 +37,31 @@ Embeddings (pgvector, FASE 4)
 ### `core.OwnerMixin` (abstrato)
 - `owner` FK → `accounts.User` (isolamento por usuário / anti-IDOR)
 
+### `core.KnowledgeEntity` (abstrato, FASE 2)
+- Herda `AtlasModel + OwnerMixin`
+- `title` (255), `summary` (texto), `status` (`draft/active/archived/committed`)
+- `KnowledgeManager` com `for_owner(user)` e `active()` (omite soft-deleted)
+
 ### `audit.AuditLog`
 - `user` FK (nullable), `action`, `entity_type`, `entity_id`
 - `summary`, `details` (JSON, com redação de secrets), `ip_address`
 - `created_at`
 
-## Modelos planejados (FASE 2)
+## Modelos da FASE 2
 
-Todas as entidades herdam `AtlasModel + OwnerMixin`:
+Todas as entidades herdam `KnowledgeEntity` (ou seja, `AtlasModel + OwnerMixin`):
 
-- **Knowledge:** título, conteúdo, resumo, status, nível de domínio.
-- **Idea:** título, descrição, status; pode evoluir para Projeto (histórico).
-- **Project:** nome, descrição, objetivo, status, tecnologias, relações.
-- **Question:** texto/pergunta, status; pode gerar Conhecimento.
-- **Decision:** contexto, problema, alternativas, decisão, justificativa,
-  consequências, data.
-- **Experience:** tipo (erro/solução/descoberta/experimento/aprendizado),
-  conteúdo, tags.
+- **Knowledge:** `content`, `domain_level` (1–4), `tags` (JSON).
+- **Idea:** `description`, `converted`; FK `project` (origem). Action de
+  conversão cria um `Project`.
+- **Project:** `name`, `description`, `objective`, `technologies` (JSON);
+  `title` sincronizado de `name`. FK reversa de ideias de origem.
+- **Question:** `question_text`, `answered`; FK `knowledge` (conhecimento
+  originado). Action de resposta cria um `Knowledge`.
+- **Decision:** `context`, `problem`, `alternatives` (JSON), `decision`,
+  `rationale`, `consequences`, `decided_at` (data).
+- **Experience:** `kind` (erro/solução/descoberta/experimento/aprendizado),
+  `content`, `tags` (JSON).
 
 ## Relacionamentos (FASE 3)
 
