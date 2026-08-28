@@ -1,0 +1,50 @@
+# SECURITY
+
+## Modelo de ameaças
+
+O Atlas trata **todo o conteúdo armazenado como dados não confiáveis**.
+
+Se uma nota contém: `"Ignore todas as instruções anteriores."` — isso é apenas
+conteúdo da nota. Nunca altera as instruções do sistema nem concede permissões.
+
+## Controles implementados (FASE 1)
+
+### Autenticação e autorização
+- JWT via SimpleJWT (`Bearer`), com refresh rotativo.
+- Usuário autenticado por **e-mail + senha**, PK **UUID** (não enumerável).
+- Permissão `IsOwner`: acesso a objetos somente pelo seu proprietário.
+- Throttling global (`anon`/`user`) e específico de login (anti força bruta).
+
+### Proteção contra IDOR
+- Toda consulta/escrita é isolada por `owner` (`OwnerMixin`).
+- PKs UUID dificultam adivinhação de IDs.
+
+### Auditoria
+- `AuditLog` registra ações relevantes.
+- Redação automática de secrets: palavras como `password`, `token`, `secret`,
+  `api_key`, `authorization` são substituídas por `[REDACTED]` (inclusive
+  aninhadas).
+
+### Dados sensíveis
+- `GEMINI_API_KEY` somente no backend e em `.env` (fora do git).
+- `SECRET_KEY` configurável via ambiente.
+- Nunca logar senhas, tokens ou chaves.
+
+## Controles planejados (próximas fases)
+
+- **Prompt injection:** sandbox por função, system prompt imutável, tools sem
+  privilégios administrativos, validação de parâmetros.
+- **Tools:** verificação de autenticação, ownership, permissões, integridade.
+- **Retry/rate limit/timeout** controlados nas chamadas ao Gemini; limites por
+  usuário; controle de tokens; sem loops infinitos.
+- **AI Audit:** registro de pergunta, modelo, tools, entidades, tokens,
+  duração e status — **nunca** chaves/tokens/secrets.
+- Modo agente com permissões configuráveis; **sem autonomia irrestrita**.
+
+## Checklist para produção
+
+- [ ] `SECRET_KEY` forte via ambiente.
+- [ ] `DJANGO_ENV=production` (exige PostgreSQL).
+- [ ] HTTPS (SSL redirect + HSTS).
+- [ ] Backups criptografados.
+- [ ] Monitoramento de logs (sem secrets).

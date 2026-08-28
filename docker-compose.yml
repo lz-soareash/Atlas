@@ -1,0 +1,46 @@
+services:
+  # ===== PostgreSQL com pgvector =====
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: atlas_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-atlas}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-atlas}
+      POSTGRES_DB: ${DB_NAME:-atlas}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-atlas} -d ${DB_NAME:-atlas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ===== Backend Django (API + frontend HTML/CSS/JS) =====
+  backend:
+    build:
+      context: ./backend
+    container_name: atlas_backend
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      DJANGO_ENV: development
+      DB_ENGINE: postgres
+      DB_NAME: ${DB_NAME:-atlas}
+      DB_USER: ${DB_USER:-atlas}
+      DB_PASSWORD: ${DB_PASSWORD:-atlas}
+      DB_HOST: db
+      DB_PORT: "5432"
+      ALLOWED_HOSTS: 127.0.0.1,localhost,0.0.0.0
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

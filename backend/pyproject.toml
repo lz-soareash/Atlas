@@ -1,0 +1,29 @@
+[project]
+name = "atlas-backend"
+version = "0.1.0"
+description = "Atlas - Knowledge Operating System + AI Assistant (backend)"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<7.0",
+    "djangorestframework>=3.15",
+    "djangorestframework-simplejwt>=5.3",
+    "django-cors-headers>=4.0",
+    "django-filter>=24.0",
+    "python-dotenv>=1.0",
+    "psycopg[binary]>=3.1",
+    "google-generativeai>=0.8",
+    "pgvector>=0.3",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-django",
+    "coverage",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_tests.py"]
+pythonpath = ["."]
