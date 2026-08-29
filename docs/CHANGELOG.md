@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## [0.8.0] — FASE 8: INTELLIGENCE
+
+### Adicionado
+- App **`intelligence`** com heurísticas determinísticas que retornam
+  **sugestões** (nenhuma ação automática):
+  - **Inbox** (`InboxItem`, CRUD isolado por owner + soft delete): captura
+    rápida de pensamentos soltos; `POST /api/inbox/:id/classify/` sugere
+    tipo/destino (Pergunta, Ideia, Experiência, Decisão, Conhecimento) sem
+    mover nada.
+  - **Duplicatas** (`GET /api/intelligence/duplicates/`): candidatos por
+    similaridade de tokens + cosseno (mesmo tipo, sem merge automático).
+  - **Sugestões de relacionamento** (`.../relationship-suggestions/`): pares
+    entre tipos com vocabulário compartilhado (sugere `RELACIONADO_A`).
+  - **Gap Analysis** (`.../gaps/`): tópicos frequentes em perguntas/projetos/
+    ideias sem um Conhecimento dedicado.
+- Frontend: módulos **Inbox** e **Inteligência** (`pages/intelligence.js`),
+  com captura/classificação e listagem das análises.
+- Migração `0001_initial` (InboxItem); app registrado em settings e urls.
+- 7 testes novos (total 161 verdes).
+
 ## [0.7.0] — FASE 7: TOOLS
 
 ### Adicionado

@@ -170,6 +170,17 @@ Status de testes: **143 verdes**.
 
 Status de testes: **154 verdes**.
 
+**FASE 8 — INTELLIGENCE** implementada e testada:
+
+- **Inbox** inteligente (`/inbox`): pense solto e peça para o assistente
+  sugerir o tipo/destino — nada é movido sem a sua decisão.
+- **Duplicatas**, **sugestões de relacionamento** e **análise de lacunas**
+  (gaps) — detectadas por similaridade/vocabulário, sempre apenas sugestões,
+  sem merge ou criação automática.
+- App `intelligence`, migração e 7 testes novos.
+
+Status de testes: **161 verdes**.
+
 ## Documentação
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitetura geral.

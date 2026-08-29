@@ -80,6 +80,8 @@ LOCAL_APPS = [
     "apps.search",
     # Fase 5 — Gemini Core (assistente)
     "apps.assistant",
+    # Fase 8 — Intelligence (inbox, duplicatas, sugestões, gaps)
+    "apps.intelligence",
 ]
 
 # Entidades aptas a participar de relacionamentos (app_label, model_name).

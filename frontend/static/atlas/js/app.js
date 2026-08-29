@@ -11,6 +11,7 @@ import { entityView, ENTITY_CONFIGS } from "./pages/entities.js";
 import { graphView } from "./pages/graph.js";
 import { searchView } from "./pages/search.js";
 import { assistantView } from "./pages/assistant.js";
+import { intelligenceView } from "./pages/intelligence.js";
 import { settingsView } from "./pages/settings.js";
 
 // Itens da barra lateral.
@@ -52,6 +53,9 @@ function defineRoutes() {
     ...MODULES.map((m) => {
       if (m.key === "assistente") {
         return { path: m.path, key: m.key, auth: true, view: assistantView };
+      }
+      if (m.key === "inbox" || m.key === "inteligencia") {
+        return { path: m.path, key: m.key, auth: true, view: intelligenceView };
       }
       if (m.key === "configuracoes") {
         return { path: m.path, key: m.key, auth: true, view: settingsView };

@@ -218,6 +218,43 @@ Lista as propostas **pendentes** do usuário (resolvidas deixam de aparecer).
 Tools de **leitura** são executadas internamente pelo chat (multi-turn) e não
 criam propostas.
 
+## Intelligence (FASE 8)
+
+### `GET|POST /api/inbox/` · `GET|PATCH|DELETE /api/inbox/:id/`
+CRUD de itens do Inbox (isolado por owner + soft delete). *(autenticado)*
+```json
+POST /api/inbox/ { "content": "Tive uma ideia: app de receitas" }
+→ 201 { "id": "...", "content": "...", "status": "open", "kind": "", "destination": "" }
+```
+
+### `POST /api/inbox/:id/classify/`
+Sugere o tipo/destino do item (heurística determinística). **Não move nada** —
+apenas preenche `kind`/`destination` e marca como `classified`.
+```json
+→ 200 { "id": "...", "kind": "Ideia", "destination": "Ideias", "status": "classified" }
+```
+
+### `GET /api/intelligence/duplicates/`
+Candidatos a duplicata (mesma entidade) por similaridade de tokens + cosseno.
+Sem merge automático.
+```json
+→ 200 { "semantic_available": true, "count": 1, "groups": [
+    { "a": {...}, "b": {...}, "similarity": 0.85, "semantic_score": 0.9 } ] }
+```
+
+### `GET /api/intelligence/relationship-suggestions/`
+Pares entre tipos diferentes com vocabulário compartilhado sugere `RELACIONADO_A`.
+```json
+→ 200 { "count": 1, "suggestions": [
+    { "origin": {...}, "target": {...}, "similarity": 0.5, "suggested": "RELACIONADO_A" } ] }
+```
+
+### `GET /api/intelligence/gaps/`
+Tópicos frequentes em perguntas/projetos/ideias sem um `Knowledge` dedicado.
+```json
+→ 200 { "count": 1, "gaps": [ { "topic": "kubernetes", "mentions": 2, "suggested": "Conhecimento: kubernetes" } ] }
+```
+
 ## API planejada (próximas fases)
 
-- Agente com tool chaining e planejamento (Fases 8–9).
+- Agente com tool chaining e planejamento (Fase 9).

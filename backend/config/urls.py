@@ -30,4 +30,6 @@ urlpatterns = [
     path("api/", include("apps.search.urls")),
     # Fase 5 — Gemini Core (assistente)
     path("api/", include("apps.assistant.urls")),
+    # Fase 8 — Intelligence (inbox, duplicatas, sugestões, gaps)
+    path("api/", include("apps.intelligence.urls")),
 ]

@@ -61,9 +61,12 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] Validação de autenticação/ownership/permissões/integridade
 - [x] Migração `0002_toolproposal` + 11 testes novos (total 154 verdes)
 
-## FASE 8 — INTELLIGENCE
-- Inbox inteligente, detecção de duplicatas (sem merge automático)
-- Sugestão de relacionamentos, Gap Analysis, Decision Intelligence
+## FASE 8 — INTELLIGENCE ✅ (implementada)
+- [x] Inbox inteligente (classificação sugere tipo/destino; nada automático)
+- [x] Detecção de duplicatas (sem merge automático)
+- [x] Sugestão de relacionamentos
+- [x] Gap Analysis (tópicos sem Conhecimento dedicado)
+- [x] Migração `0001_initial` + 7 testes novos (total 161 verdes)
 
 ## FASE 9 — AGENT
 - Tool chaining, planejamento, execução controlada (sem autonomia irrestrita)
