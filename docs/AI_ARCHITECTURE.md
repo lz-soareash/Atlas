@@ -38,10 +38,15 @@ RESPOSTA (com fontes)
 
 ## Classificação da resposta
 
-- **Fato** — informação encontrada no Atlas.
-- **Inferência** — conclusão a partir dos dados (nunca apresentada como fato).
-- **Sugestão** — recomendação da IA.
-- **Informação externa** — obtida fora do Atlas.
+O modelo inicia a resposta com uma tag obrigatória que a API/UI traduzem:
+
+- **`[FATO]`** — informação encontrada no Atlas (fontes).
+- **`[INFERÊNCIA]`** — conclusão a partir dos dados (nunca como fato).
+- **`[SUGESTÃO]`** — recomendação da IA.
+- **`[INFORMAÇÃO EXTERNA]`** — obtida fora do Atlas (rotulada explicitamente).
+
+Fallback heurístico caso o modelo não siga o formato (com fontes → Fato; sem
+fontes → Sugestão). Ver `services/chat.py:parse_classification`.
 
 ## Embeddings
 
@@ -61,9 +66,11 @@ Toda tool valida autenticação, ownership, permissões, parâmetros e integrida
 
 ## Memória
 
-Categorias: Preferências, Contexto, Objetivos, Projetos, Decisões, Experiências.
-Nada é salvo automaticamente — memórias permanentes são criadas explicitamente
-ou sugeridas e confirmadas. Preparado para temporária/sessão/permanente.
+Modelo `assistant.Memory` (FASE 6), categorias: Preferências, Contexto,
+Objetivos, Projetos, Decisões, Experiências. Criadas **explicitamente** pelo
+usuário via `/api/memories/`; injetadas como contexto no chat
+(`MAX_MEMORIES`). Nada é salvo automaticamente — permanentes são explícitas ou
+sugeridas e confirmadas.
 
 ## Controle da API Gemini (FASE 5)
 

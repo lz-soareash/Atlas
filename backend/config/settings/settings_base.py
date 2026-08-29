@@ -115,6 +115,8 @@ GEMINI_RATE_LIMIT_PER_MIN = int(env_str("GEMINI_RATE_LIMIT_PER_MIN", "20"))
 MAX_CHAT_MESSAGES = int(env_str("MAX_CHAT_MESSAGES", "24"))
 # Número máximo de fontes/resultados de contexto trazidos pelo retrieval.
 MAX_RETRIEVAL_RESULTS = int(env_str("MAX_RETRIEVAL_RESULTS", "6"))
+# Número máximo de memórias do usuário injetadas no contexto do chat.
+MAX_MEMORIES = int(env_str("MAX_MEMORIES", "20"))
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

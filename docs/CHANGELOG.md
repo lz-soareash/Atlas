@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [0.6.0] — FASE 6: ATLAS ASSISTANT
+
+### Adicionado
+- **Classificação completa da resposta** no chat:
+  - O modelo inicia a resposta com uma tag obrigatória (`[FATO]`, `[INFERÊNCIA]`,
+    `[SUGESTÃO]`, `[INFORMAÇÃO EXTERNA]`) — ver `services/chat.py:parse_classification`.
+  - A API e o frontend mostram a classificação com rótulo amigável e
+    `source_based` (Fato/Inferência exigem fontes). Fallback heurístico quando o
+    modelo não segue o formato.
+- **Memória persistente** (modelo `assistant.Memory`):
+  - Kinds: Preferência, Contexto, Objetivo, Projeto, Decisão, Experiência.
+  - `MemoryViewSet` (CRUD isolado por owner + soft delete) → `GET|POST /api/memories/`,
+    `GET|PATCH|DELETE /api/memories/:id/`.
+  - `build_context` injeta as memórias do usuário no prompt do chat
+    (`MAX_MEMORIES` configurável) e o `DeterministicProvider` também as cita.
+- Frontend: módulo **Memória** (`/memoria`) com criação/listagem/exclusão
+  (config `memoria` em `pages/entities.js`, com cabeçalhos de coluna
+  configuráveis `config.headers`) e Assistente marcado como Fase 6.
+- Migração `0001_initial` (Memory) e `MAX_MEMORIES` no settings.
+- 10 testes novos (total 143 verdes).
+
 ## [0.5.0] — FASE 5: GEMINI CORE
 
 ### Adicionado

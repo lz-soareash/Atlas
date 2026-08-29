@@ -143,6 +143,20 @@ Status de testes: **111 verdes**.
 
 Status de testes: **133 verdes**.
 
+**FASE 6 — ATLAS ASSISTANT** implementada e testada:
+
+- **Classificação completa** das respostas: o assistente inicia com a tag
+  `[FATO]`, `[INFERÊNCIA]`, `[SUGESTÃO]` ou `[INFORMAÇÃO EXTERNA]`, exibida na
+  interface — distinguindo fatos encontrados no Atlas, conclusões, sugestões e
+  informação externa.
+- **Memória** persistente (`/api/memories/`): preferências, contexto, objetivos,
+  projetos, decisões e experiências, criadas explicitamente pelo usuário e
+  injetadas como contexto no chat.
+- Página de **Memória** no frontend (`/memoria`).
+- Migração e 10 testes novos.
+
+Status de testes: **143 verdes**.
+
 ## Documentação
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitetura geral.

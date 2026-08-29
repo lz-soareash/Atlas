@@ -170,6 +170,23 @@ Chat com contexto do Atlas (RAG). *(autenticado — throttle `gemini`)*
 - Erros mapeados: `429` (rate limit atingido), `400` (mensagens inválidas/limite
   de tokens), `502` (IA indisponível). Detalhes internos nunca são expostos.
 
+## Memória (FASE 6)
+
+### `GET|POST /api/memories/` · `GET|PATCH|DELETE /api/memories/:id/`
+CRUD de memórias persistentes do usuário (isolamento por owner + soft delete,
+mesmos padrões do Knowledge Core). *(autenticado)*
+
+```json
+POST /api/memories/
+{ "kind": "objetivo", "content": "Quero dominar Django" }
+→ 201 { "id": "...", "kind": "objetivo", "kind_label": "Objetivo",
+        "content": "Quero dominar Django", "owner": "...", "created_at": "..." }
+```
+- `kind`: `preferencia` | `contexto` | `objetivo` | `projeto` | `decisao` |
+  `experiencia`.
+- As memórias ativas do usuário são injetadas como contexto no chat
+  (`POST /api/assistant/chat/`), limitadas por `MAX_MEMORIES`.
+
 ## API planejada (próximas fases)
 
-- Memória, tools e agente (Fases 6–9).
+- Tools (leitura/escrita com confirmação) e agente (Fases 7–9).

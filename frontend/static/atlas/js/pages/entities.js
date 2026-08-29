@@ -98,6 +98,29 @@ export const ENTITY_CONFIGS = {
     ],
     columns: (r) => [esc(r.title), esc(r.kind_label), esc(r.status), new Date(r.created_at).toLocaleDateString()],
   },
+  memoria: {
+    api: "/memories/",
+    sing: "Memória",
+    headers: ["Memória", "Tipo", "Criada em"],
+    fields: [
+      {
+        name: "kind",
+        label: "Tipo",
+        type: "select",
+        required: true,
+        options: [
+          ["preferencia", "Preferência"],
+          ["contexto", "Contexto"],
+          ["objetivo", "Objetivo"],
+          ["projeto", "Projeto"],
+          ["decisao", "Decisão"],
+          ["experiencia", "Experiência"],
+        ],
+      },
+      { name: "content", label: "Memória", type: "textarea", required: true },
+    ],
+    columns: (r) => [esc(r.content), esc(r.kind_label), new Date(r.created_at).toLocaleDateString()],
+  },
 };
 
 // Transforma payload de formulário (tags/lists) no formato da API.
@@ -168,9 +191,7 @@ export function entityView(module) {
           listEl.innerHTML = `<p class="muted">Nenhum registro ainda.</p>`;
           return;
         }
-        const headers = ["Título", "Status", ...(perConfig ? [""] : [])].map(
-          (h) => `<th>${h}</th>`
-        ).join("") + `<th></th>`;
+        const headers = (config.headers || ["Título", "Status"]).map((h) => `<th>${h}</th>`).join("") + `<th></th>`;
         listEl.innerHTML = `
           <table class="entity-table">
             <thead><tr>${headers}</tr></thead>

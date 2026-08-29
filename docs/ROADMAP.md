@@ -47,11 +47,13 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] `POST /api/assistant/chat/` + frontend do Assistente
 - [x] Migrações não necessárias + 22 testes novos (total 133 verdes)
 
-## FASE 6 — ATLAS ASSISTANT
-- Chat com RAG real (Query analysis → Retrieval → Context Builder → Gemini)
-- Fontes/rastreabilidade (📁 Projeto, 🧠 Conhecimento, ⚖️ Decisão, 📝 Experiência)
-- Classificação Fato/Inferência/Sugestão/Informação externa
-- Memória (preferências, contexto, objetivos; apenas explícitas/confirmadas)
+## FASE 6 — ATLAS ASSISTANT ✅ (implementada)
+- [x] Chat com RAG real (Retrieval → Context Builder → Gemini) — Fase 5
+- [x] Fontes/rastreabilidade (📁 Projeto, 🧠 Conhecimento, ⚖️ Decisão, 📝 Experiência)
+- [x] Classificação Fato/Inferência/Sugestão/Informação externa (tag obrigatória)
+- [x] Memória (Preferências, Contexto, Objetivos, Projetos, Decisões,
+      Experiências; explícitas pelo usuário)
+- [x] Migração `0001_initial` + 10 testes novos (total 143 verdes)
 
 ## FASE 7 — TOOLS
 - Leitura: search_*, get_entity, get_project_context, find_related_entities

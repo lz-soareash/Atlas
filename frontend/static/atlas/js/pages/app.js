@@ -74,7 +74,8 @@ export const MODULES = [
   { key: "experiencias", path: "/experiencias", title: "Experiências", description: "Erros, soluções e aprendizados.", phase: 2 },
   { key: "grafo", path: "/grafo", title: "Grafo", description: "Visualização das conexões entre entidades.", phase: 3 },
   { key: "busca", path: "/busca", title: "Busca", description: "Busca híbrida (textual + semântica + grafo).", phase: 4 },
-  { key: "assistente", path: "/assistente", title: "Assistente", description: "Atlas Assistant — chat com conhecimento do Atlas.", phase: 5 },
+  { key: "assistente", path: "/assistente", title: "Assistente", description: "Atlas Assistant — chat com conhecimento do Atlas.", phase: 6 },
+  { key: "memoria", path: "/memoria", title: "Memória", description: "Preferências, contexto e objetivos do usuário.", phase: 6 },
   { key: "configuracoes", path: "/configuracoes", title: "Configurações", description: "Preferências do usuário e do Assistant.", phase: 1 },
 ];
 

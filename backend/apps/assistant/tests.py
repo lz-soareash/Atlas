@@ -23,14 +23,26 @@ from .exceptions import (
     RateLimitExceededError,
     TokenLimitError,
 )
+from .models import Memory
 from .providers import DeterministicProvider, GeminiProvider, resolve_chat_provider
 from .retry import retry_with_backoff
 from .services import ChatService
+from .services.chat import parse_classification
 
 
 def _givenai():
     """Provider determinístico com registro de chamadas (para asserts)."""
     return DeterministicProvider()
+
+
+class StubProvider(DeterministicProvider):
+    """Provider que devolve um texto fixo (para testar classificação)."""
+
+    def __init__(self, answer: str):
+        self.answer = answer
+
+    def generate_text(self, messages, *args, **kwargs):
+        return {"content": self.answer, "tool_calls": []}
 
 
 def _patch_embeddings(testcase):
@@ -244,6 +256,114 @@ class ChatServiceTests(TestCase):
         self.assertIn("sources", captured["context"])
         titles = [s["title"] for s in captured["context"]["sources"]]
         self.assertIn("Django REST", titles)
+
+
+# ---------------- Classificação (Fase 6) ----------------
+
+class ClassificationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        _patch_embeddings(self)
+
+    def test_parses_all_tags(self):
+        cases = [
+            ("[FATO] Django é X", "Django é X", "fato"),
+            ("[INFERÊNCIA] Logo Y", "Logo Y", "inferencia"),
+            ("[SUGESTÃO] Tente Z", "Tente Z", "sugestao"),
+            ("[INFORMAÇÃO EXTERNA] Sobre k8s", "Sobre k8s", "informacao_externa"),
+        ]
+        for raw, expect_rest, expect_kind in cases:
+            rest, cls = parse_classification(raw, has_sources=False)
+            self.assertEqual(rest, expect_rest)
+            self.assertEqual(cls["kind"], expect_kind)
+
+    def test_strips_tag_without_leading_space(self):
+        rest, cls = parse_classification("[FATO]Conteúdo", has_sources=False)
+        self.assertEqual(rest, "Conteúdo")
+        self.assertEqual(cls["kind"], "fato")
+
+    def test_fallback_to_fact_with_sources(self):
+        rest, cls = parse_classification("Texto sem tag", has_sources=True)
+        self.assertEqual(rest, "Texto sem tag")
+        self.assertEqual(cls["kind"], "fato")
+        self.assertTrue(cls["source_based"])
+
+    def test_fallback_to_suggestion_without_sources(self):
+        _, cls = parse_classification("Texto sem tag", has_sources=False)
+        self.assertEqual(cls["kind"], "sugestao")
+
+    def test_chat_with_stub_provider_classifies(self):
+        svc = ChatService(provider=StubProvider("[INFERÊNCIA] Provavelmente vocês usam Django."))
+        data = svc.chat(self.user, [{"role": "user", "content": "o que acham?"}])
+        self.assertEqual(data["classification"]["kind"], "inferencia")
+        self.assertTrue(data["answer"].startswith("Provavelmente"))
+
+
+# ---------------- Memória (Fase 6) ----------------
+
+class MemoryContextTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        self.other = User.objects.create_user(email="b@atlas.test", password="senha-forte-123")
+        _patch_embeddings(self)
+
+    def test_memories_injected_into_context(self):
+        Memory.objects.create(owner=self.user, kind="objetivo", content="Quero dominar Django")
+        Memory.objects.create(owner=self.other, kind="preferencia", content="Segredo alheio")
+        captured = {}
+
+        class Capturing(DeterministicProvider):
+            def generate_text(self, messages, **kwargs):
+                captured["context"] = kwargs.get("context")
+                return super().generate_text(messages, **kwargs)
+
+        ChatService(provider=Capturing()).chat(self.user, [{"role": "user", "content": "oi"}])
+        memories = captured["context"]["memories"]
+        self.assertEqual(len(memories), 1)
+        self.assertIn("Quero dominar Django", memories[0]["content"])
+        self.assertNotIn("Segredo alheio", [m["content"] for m in memories])
+
+    def test_deterministic_answer_uses_memories(self):
+        Memory.objects.create(owner=self.user, kind="preferencia", content="Prefiro respostas curtas")
+        svc = ChatService(provider=DeterministicProvider())
+        data = svc.chat(self.user, [{"role": "user", "content": "zzz inexistente"}])
+        self.assertIn("Prefiro respostas curtas", data["answer"])
+        self.assertEqual(data["classification"]["kind"], "sugestao")
+
+
+# ---------------- Memória Endpoint (Fase 6) ----------------
+
+class MemoryEndpointTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        self.other = User.objects.create_user(email="b@atlas.test", password="senha-forte-123")
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+        self.list_url = reverse("memories-list")
+
+    def test_create_and_list(self):
+        resp = self.client.post(
+            self.list_url,
+            {"kind": "objetivo", "content": "Aprender Flask"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.data["kind_label"], "Objetivo")
+        lst = self.client.get(self.list_url)
+        self.assertEqual(len(lst.data["results"]), 1)
+
+    def test_isolated_by_owner(self):
+        Memory.objects.create(owner=self.other, kind="contexto", content="Alheio")
+        lst = self.client.get(self.list_url)
+        self.assertEqual(len(lst.data["results"]), 0)
+
+    def test_delete_is_soft(self):
+        m = Memory.objects.create(owner=self.user, kind="contexto", content="x")
+        del_resp = self.client.delete(f"{self.list_url}{m.pk}/")
+        self.assertEqual(del_resp.status_code, 204)
+        lst = self.client.get(self.list_url)
+        self.assertEqual(len(lst.data["results"]), 0)
+        self.assertTrue(Memory.objects.filter(pk=m.pk).exists())
 
 
 # ---------------- Endpoint ----------------

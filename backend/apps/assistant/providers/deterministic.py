@@ -54,17 +54,35 @@ class DeterministicProvider(AIProvider):
         context = kwargs.get("context") or {}
         query = self._last_user(messages)
         sources = context.get("sources", [])
+        memories = context.get("memories", [])
 
         if not sources:
+            prefix = "[SUGESTÃO] "
+            if memories:
+                lines = [
+                    prefix + "Modo determinístico (sem LLM configurado). "
+                    "Baseado nas suas memórias:"
+                ]
+                for m in memories[:5]:
+                    lines.append(f"- ({m.get('label', '')}) {m.get('content', '')}")
+                lines.append(
+                    "Nenhuma fonte do Atlas foi encontrada para “%s”." % (query or "sua pergunta")
+                )
+                return "\n".join(lines)
             return (
-                "Modo determinístico (sem LLM configurado). "
-                "Nenhuma fonte encontrada no Atlas para: “%s”." % (query or "sua pergunta")
+                prefix + "Modo determinístico (sem LLM configurado). "
+                "Nenhuma fonte encontrada no Atlas para “%s”." % (query or "sua pergunta")
             )
 
         lines = [f"Encontrei {len(sources)} fonte(s) no Atlas para “{query or 'sua pergunta'}”:"]
         for s in sources[:6]:
             label = _SOURCE_LABEL.get(s.get("entity"), s.get("entity", "fonte"))
             lines.append(f"- {label}: {s.get('title', '')}")
+        if memories:
+            lines.append("")
+            lines.append("Para contexto, lembrei de suas memórias:")
+            for m in memories[:5]:
+                lines.append(f"- ({m.get('label', '')}) {m.get('content', '')}")
         lines.append("")
         lines.append(
             "Este é o modo determinístico (sem GEMINI_API_KEY). "

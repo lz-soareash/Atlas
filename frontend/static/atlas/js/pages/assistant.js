@@ -25,11 +25,11 @@ export function assistantView() {
     html: `
       <header class="page-header">
         <h1>Atlas Assistant</h1>
-        <span class="badge">Fase 5</span>
+        <span class="badge">Fase 6</span>
       </header>
       <div class="chat-window">
         <div class="chat-log" data-chat-log>
-          <p class="muted">Pergunte sobre seu conhecimento, projetos e ideias.</p>
+          <p class="muted">Pergunte sobre seu conhecimento, projetos, ideias e memórias.</p>
         </div>
         <form class="chat-input" data-chat-form>
           <input type="text" name="message" placeholder="Pergunte ao Atlas…" autocomplete="off" />

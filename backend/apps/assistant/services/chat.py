@@ -34,6 +34,33 @@ _SOURCE_EMOJI = {
 }
 _TYPE_NAMES = {m["key"]: m["label"] for m in SEARCH_ENTITIES}
 
+# Tags de classificação exigidas do modelo (ver prompts.SYSTEM_PROMPT).
+_CLASSIFICATION_TAGS = {
+    "[FATO]": ("fato", "Fato (com base no Atlas)", True),
+    "[INFERÊNCIA]": ("inferencia", "Inferência (conclusão da IA)", True),
+    "[SUGESTÃO]": ("sugestao", "Sugestão (recomendação da IA)", False),
+    "[INFORMAÇÃO EXTERNA]": ("informacao_externa", "Informação externa (fora do Atlas)", False),
+}
+
+
+def parse_classification(answer: str, *, has_sources: bool) -> tuple[str, dict]:
+    """Extrai a tag de classificação do início da resposta.
+
+    Se o modelo não seguir o formato, cai para a heurística: com fontes →
+    Fato; sem fontes → Sugestão.
+    Returns (answer_sem_tag, classification).
+    """
+    stripped = answer.lstrip()
+    for tag, (kind, label, _) in _CLASSIFICATION_TAGS.items():
+        if stripped.startswith(tag):
+            remainder = stripped[len(tag):].lstrip()
+            source_based = kind in ("fato", "inferencia") and has_sources
+            return remainder, {"kind": kind, "label": label, "source_based": source_based}
+
+    if has_sources:
+        return answer, {"kind": "fato", "label": "Fato (com base no Atlas)", "source_based": True}
+    return answer, {"kind": "sugestao", "label": "Sugestão (sem fontes no Atlas)", "source_based": False}
+
 
 class ChatService:
     """Processa uma conversa de chat do usuário com o Atlas."""
@@ -82,12 +109,15 @@ class ChatService:
         answer = result.get("content", "").strip()
         if not answer:
             answer = "Não consegui gerar uma resposta. Tente novamente."
+            classification = {"kind": "sugestao", "label": "Sugestão (sem fontes no Atlas)", "source_based": False}
+        else:
+            answer, classification = parse_classification(answer, has_sources=bool(context["sources"]))
 
         return {
             "answer": answer,
             "sources": self._sources_public(context["sources"]),
             "provider": self._provider_name(),
-            "classification": self._classify(context["sources"]),
+            "classification": classification,
             "semantic_available": context.get("semantic_available", False),
         }
 
@@ -126,6 +156,7 @@ class ChatService:
         context_block = CONTEXT_PROMPT.format(
             sources_block=self._serialize_sources(context["sources"]),
             graph_block=self._serialize_graph(context.get("graph_edges", [])),
+            memory_block=self._serialize_memories(context.get("memories", [])),
         )
         provider_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -133,6 +164,14 @@ class ChatService:
         ]
         provider_messages.extend(messages)
         return provider_messages
+
+    def _serialize_memories(self, memories) -> str:
+        if not memories:
+            return ""
+        lines = ["\nMemórias do usuário (preferências, contexto e objetivos):"]
+        for m in memories[:8]:
+            lines.append(f"- ({m.get('label', '')}) {m.get('content', '')}")
+        return "\n".join(lines) + "\n"
 
     def _serialize_sources(self, sources) -> str:
         if not sources:
@@ -168,8 +207,3 @@ class ChatService:
             }
             for s in sources
         ]
-
-    def _classify(self, sources) -> dict:
-        if sources:
-            return {"kind": "fato", "label": "Fato (com base no Atlas)", "source_based": True}
-        return {"kind": "sugestao", "label": "Sugestão (sem fontes no Atlas)", "source_based": False}

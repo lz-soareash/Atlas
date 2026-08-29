@@ -1,4 +1,4 @@
-"""Views do Atlas Assistant (Fase 5 — Gemini Core)."""
+"""Views do Atlas Assistant (Fase 5 — Gemini Core; Fase 6 — Memória)."""
 
 from rest_framework import permissions, serializers
 from rest_framework.response import Response
@@ -11,6 +11,17 @@ from apps.assistant.exceptions import (
 )
 from apps.assistant.services import ChatService
 from apps.assistant.throttling import GeminiRateThrottle
+from apps.core.views import OwnerModelViewSet
+
+from .models import Memory
+from .serializers import MemorySerializer
+
+
+class MemoryViewSet(OwnerModelViewSet):
+    """CRUD de memórias do usuário (isolamento por owner + soft delete)."""
+
+    queryset = Memory.objects.all()
+    serializer_class = MemorySerializer
 
 
 class ChatView(APIView):
