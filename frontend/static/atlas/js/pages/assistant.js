@@ -86,6 +86,28 @@ export function assistantView() {
         containerEl.insertBefore(meta, containerEl.firstChild);
       }
 
+      function renderAgentSteps(containerEl, agentRun) {
+        if (!agentRun || !agentRun.steps || !agentRun.steps.length) return;
+        const box = document.createElement("div");
+        box.className = "chat-agent-steps";
+        box.innerHTML = `<div class="chat-sources-title">Passos executados (${agentRun.iterations} iteração(ões))</div>`;
+        agentRun.steps.forEach((s, i) => {
+          const row = document.createElement("div");
+          row.className = "agent-step";
+          const st = s.status === "ok" ? "✓" : "✕";
+          row.innerHTML = `
+            <span class="agent-step-iter">#${esc(s.iteration)}</span>
+            <span class="agent-step-status" title="${esc(s.status)}">${st}</span>
+            <span class="agent-step-body">
+              <span class="agent-step-tool">${esc(s.tool)}</span>
+              <span class="agent-step-summary">${esc(s.summary || "")}</span>
+            </span>
+          `;
+          box.appendChild(row);
+        });
+        containerEl.appendChild(box);
+      }
+
       function renderProposals(containerEl, proposals) {
         if (!proposals || !proposals.length) return;
         const box = document.createElement("div");
@@ -153,6 +175,7 @@ export function assistantView() {
           pending.querySelector(".chat-bubble").textContent = res.data.answer;
           renderMeta(pending, res.data);
           renderSources(pending, res.data.sources);
+          renderAgentSteps(pending, res.data.agent_run);
           renderProposals(pending, res.data.proposals);
           history.push({ role: "assistant", content: res.data.answer });
           log.scrollTop = log.scrollHeight;

@@ -25,7 +25,7 @@ from .exceptions import (
     RateLimitExceededError,
     TokenLimitError,
 )
-from .models import Memory, ProposalStatus, ToolProposal
+from .models import AgentRun, AgentRunStatus, Memory, ProposalStatus, ToolProposal
 from .providers import DeterministicProvider, GeminiProvider, resolve_chat_provider
 from .retry import retry_with_backoff
 from .services import ChatService
@@ -152,6 +152,7 @@ class GeminiProviderTests(TestCase):
         fn = mock.MagicMock()
         fn.name = "get_entity"
         fn.args = {"id": "abc"}
+        fn.id = "call-1"
         part.function_call = fn
         resp = mock.MagicMock()
         resp.text = ""
@@ -160,7 +161,7 @@ class GeminiProviderTests(TestCase):
         client.models.generate_content.return_value = resp
         with mock.patch("apps.assistant.providers.gemini.Client", return_value=client):
             out = self.p.generate_text([{"role": "user", "content": "bach"}])
-        self.assertEqual(out["tool_calls"], [{"name": "get_entity", "args": {"id": "abc"}}])
+        self.assertEqual(out["tool_calls"], [{"name": "get_entity", "args": {"id": "abc"}, "id": "call-1"}])
 
 
 # ---------------- DeterministicProvider / resolve ----------------
@@ -571,3 +572,119 @@ class ReadToolChatTests(TestCase):
         self.assertGreater(calls["n"], 1)
         self.assertEqual(data["classification"]["kind"], "fato")
         self.assertTrue(data["answer"])
+
+
+class AgentLoopTests(TestCase):
+    """Fase 9 — AGENT: loop de tool chaining, planejamento de passos e rastreio."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        _patch_embeddings(self)
+
+    def test_loop_supports_more_than_two_iterations(self):
+        Knowledge.objects.create(owner=self.user, title="Django REST", content="APIs REST")
+        Knowledge.objects.create(owner=self.user, title="PostgreSQL", content="banco")
+
+        calls = {"n": 0}
+
+        class ChainProvider(DeterministicProvider):
+            def generate_text(self, messages, **kwargs):
+                calls["n"] += 1
+                if calls["n"] == 2:
+                    # Segunda chamada já recebeu resultado da 1ª tool → emite outra.
+                    return {
+                        "content": "",
+                        "tool_calls": [
+                            {"name": "search_entities", "args": {"query": "postgres", "limit": 2}, "id": "c2"}
+                        ],
+                    }
+                if calls["n"] == 3:
+                    return {
+                        "content": "",
+                        "tool_calls": [
+                            {"name": "get_entity", "args": {"entity": "knowledge", "id": "?"}, "id": "c3"}
+                        ],
+                    }
+                if calls["n"] == 1:
+                    return {
+                        "content": "",
+                        "tool_calls": [
+                            {"name": "search_entities", "args": {"query": "django", "limit": 3}, "id": "c1"}
+                        ],
+                    }
+                return {"content": "[FATO] Pronto.", "tool_calls": []}
+
+        svc = ChatService(provider=ChainProvider())
+        data = svc.chat(self.user, [{"role": "user", "content": "investigue}"}])
+
+        # Loop rodou além das 2 iterações do fluxo antigo.
+        self.assertGreater(calls["n"], 2)
+        self.assertEqual(calls["n"], 4)
+
+        run = data["agent_run"]
+        self.assertIsNotNone(run)
+        self.assertEqual(run["status"], AgentRunStatus.DONE)
+        self.assertEqual(len(run["steps"]), 3)
+        # tool_call_id propagado nos steps via call id.
+        self.assertTrue(AgentRun.objects.filter(owner=self.user, pk=run["id"]).exists())
+
+    def test_tool_call_id_propagated_to_messages(self):
+        seen_ids = []
+
+        class IdProvider(DeterministicProvider):
+            def generate_text(self, messages, **kwargs):
+                for m in messages:
+                    if m.get("role") == "tool" and m.get("tool_call_id"):
+                        seen_ids.append(m["tool_call_id"])
+                if not seen_ids:
+                    return {
+                        "content": "",
+                        "tool_calls": [
+                            {"name": "search_entities", "args": {"query": "x", "limit": 1}, "id": "abc-123"}
+                        ],
+                    }
+                return {"content": "[FATO] Usou id.", "tool_calls": []}
+
+        svc = ChatService(provider=IdProvider())
+        data = svc.chat(self.user, [{"role": "user", "content": "oi"}])
+        self.assertIn("abc-123", seen_ids)
+        self.assertTrue(data["answer"])
+
+    def test_respects_max_tool_iterations(self):
+        calls = {"n": 0}
+
+        class InfiniteProvider(DeterministicProvider):
+            # Sempre pede outra tool → o loop deve parar no limite sem travar.
+            def generate_text(self, messages, **kwargs):
+                calls["n"] += 1
+                return {
+                    "content": "",
+                    "tool_calls": [
+                        {"name": "search_entities", "args": {"query": "x", "limit": 1}}
+                    ],
+                }
+
+        svc = ChatService(provider=InfiniteProvider())
+        data = svc.chat(self.user, [{"role": "user", "content": "loop"}])
+        # 1 chamada inicial + 6 iterações do loop (MAX_TOOL_ITERATIONS default).
+        self.assertEqual(calls["n"], 7)
+        self.assertEqual(data["agent_run"]["iterations"], 6)
+        self.assertEqual(data["agent_run"]["status"], AgentRunStatus.DONE)
+
+    def test_agent_run_viewset_owner_isolated_and_readonly(self):
+        other = User.objects.create_user(email="b@atlas.test", password="senha-forte-123")
+        AgentRun.objects.create(owner=other, query="secreta", steps=[])
+        mine = AgentRun.objects.create(owner=self.user, query="minha", steps=[{"tool": "x"}])
+
+        client = APIClient()
+        client.force_authenticate(self.user)
+        resp = client.get("/api/agent-runs/")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        ids = [r["id"] for r in data]
+        self.assertIn(str(mine.pk), ids)
+        self.assertNotIn(str(other.pk), ids)
+
+        create = client.post("/api/agent-runs/", {"query": "h"}, format="json")
+        self.assertEqual(create.status_code, 405)  # read-only
+

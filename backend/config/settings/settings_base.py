@@ -119,6 +119,10 @@ MAX_CHAT_MESSAGES = int(env_str("MAX_CHAT_MESSAGES", "24"))
 MAX_RETRIEVAL_RESULTS = int(env_str("MAX_RETRIEVAL_RESULTS", "6"))
 # Número máximo de memórias do usuário injetadas no contexto do chat.
 MAX_MEMORIES = int(env_str("MAX_MEMORIES", "20"))
+# Fase 9 — AGENT: máximo de iterações (chamadas de tools) num turno antes de
+# o agente parar de executar e devolver a resposta. Escritas sempre exigem
+# aprovação via ToolProposal (execução controlada, sem autonomia irrestrita).
+MAX_TOOL_ITERATIONS = int(env_str("MAX_TOOL_ITERATIONS", "6"))
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

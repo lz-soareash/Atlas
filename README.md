@@ -184,6 +184,18 @@ Status de testes: **154 verdes**.
 
 Status de testes: **164 verdes**.
 
+**FASE 9 — AGENT** implementada e testada:
+
+- **Loop de agente**: várias iterações de ferramentas por turno (não só 2),
+  com limite `MAX_TOOL_ITERATIONS` — o agente encadeia passos até concluir.
+- **Rastreio transparente**: `AgentRun` registra cada execução (ferramenta,
+  iteração, status); o chat mostra "Passos executados" e o histórico fica em
+  `GET /api/assistant/agent-runs/`.
+- **Execução controlada**: leitura roda na hora; escrita **sempre** gera
+  proposta para você aprovar. Sem autonomia irrestrita.
+
+Status de testes: **168 verdes**.
+
 ## Documentação
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitetura geral.

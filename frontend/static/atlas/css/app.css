@@ -728,3 +728,52 @@ textarea {
   padding: 4px 10px;
   font-size: 0.8rem;
 }
+
+/* ---------- Agente (Fase 9) — passos executados ---------- */
+.chat-agent-steps {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+}
+
+.agent-step-iter {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--accent-2);
+  min-width: 26px;
+}
+
+.agent-step-status {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--accent);
+  width: 14px;
+}
+
+.agent-step-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.agent-step-tool {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.agent-step-summary {
+  color: var(--muted-2);
+  word-break: break-word;
+}

@@ -38,7 +38,13 @@ _ROLE_MAP = {"user": "user", "assistant": "model", "model": "model"}
 
 
 def _to_content(messages: list[dict[str, Any]]) -> tuple[list[Any], str | None]:
-    """Converte mensagens [{role, content}] para contents + system_instruction."""
+    """Converte mensagens [{role, content}] para contents + system_instruction.
+
+    Mensagens de role "tool" (resultado de function_call) são convertidas para
+    `function_response` nativo, propagando `tool_call_id` — essencial para o
+    protocolo de function calling confiável em chains (Fase 9). Se a
+    construção nativa falhar, cai para texto simples (defensivo).
+    """
     system_parts = []
     contents = []
     for msg in messages:
@@ -47,9 +53,27 @@ def _to_content(messages: list[dict[str, Any]]) -> tuple[list[Any], str | None]:
         if msg.get("role") in ("system", "developer"):
             system_parts.append(content)
             continue
+        if msg.get("role") == "tool":
+            contents.append(_tool_result_content(msg))
+            continue
         contents.append(types.Content(role=role, parts=[types.Part(text=content)]))
     system = "\n".join(system_parts) if system_parts else None
     return contents, system
+
+
+def _tool_result_content(msg: dict[str, Any]) -> Any:
+    """Monta um Content de function_response a partir de uma mensagem de tool."""
+    try:
+        part = types.Part(
+            function_response=types.FunctionResponse(
+                name=msg.get("name") or "tool",
+                id=msg.get("tool_call_id") or msg.get("id"),
+                response={"output": msg.get("content", "")},
+            )
+        )
+    except Exception:  # noqa: BLE001
+        part = types.Part(text=str(msg.get("content", "")))
+    return types.Content(role="user", parts=[part])
 
 
 class GeminiProvider(AIProvider):
@@ -156,7 +180,10 @@ def _extract_tool_calls(response: Any) -> list[dict[str, Any]]:
             fn = part.function_call
             if fn is not None:
                 args = {k: v for k, v in fn.args.items()}
-                calls.append({"name": fn.name, "args": args})
+                call = {"name": fn.name, "args": args}
+                if isinstance(getattr(fn, "id", None), str) and fn.id:
+                    call["id"] = fn.id
+                calls.append(call)
     except (AttributeError, IndexError, TypeError):
         pass
     return calls

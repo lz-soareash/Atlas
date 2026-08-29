@@ -160,7 +160,9 @@ Chat com contexto do Atlas (RAG). *(autenticado — throttle `gemini`)*
                  "score": 8.83 } ],
   "provider": "gemini" | "deterministic",
   "classification": { "kind": "fato"|"sugestao", "label": "...", "source_based": true },
-  "semantic_available": true
+  "semantic_available": true,
+  "proposals": [],
+  "agent_run": { }   // presente apenas quando o agente executou tools (Fase 9)
 }
 ```
 - Recupera contexto relevante do usuário (busca híbrida + grafo), sanitiza e
@@ -217,6 +219,38 @@ Lista as propostas **pendentes** do usuário (resolvidas deixam de aparecer).
 
 Tools de **leitura** são executadas internamente pelo chat (multi-turn) e não
 criam propostas.
+
+## Agente (FASE 9)
+
+### Loop de tools + rastreio
+Quando o assistente usa tools, ele roda um **loop de agente**: a IA pede
+ferramentas, elas são executadas (leitura) ou viram proposta (escrita), o
+resultado volta à IA e o processo repete até não haver mais calls ou atingir
+`MAX_TOOL_ITERATIONS` (default 6). Cada execução gera um `AgentRun` (rastreio
+transparente) e o payload do chat ganha `agent_run`:
+```json
+{
+  "agent_run": {
+    "id": "...",
+    "query": "search_entities, get_entity",
+    "status": "done",
+    "iterations": 2,
+    "steps": [
+      { "iteration": 1, "tool": "search_entities", "kind": "read",
+        "status": "ok", "summary": "3 resultado(s)" }
+    ],
+    "created_at": "..."
+  }
+}
+```
+
+### `GET /api/assistant/agent-runs/` · `GET /api/assistant/agent-runs/:id/`
+Histórico de execuções do agente (read-only, isolado por owner). Cada item
+expõe `query`, `status`, `iterations` e `steps`. *(autenticado)*
+
+- **Execução controlada**: ferramentas de escrita **nunca** são executadas no
+  loop — sempre geram `ToolProposal` que o usuário aprova/rejeita. Não há
+  autonomia irrestrita.
 
 ## Intelligence (FASE 8)
 

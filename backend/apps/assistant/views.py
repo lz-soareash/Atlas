@@ -14,8 +14,8 @@ from apps.assistant.services import ChatService
 from apps.assistant.throttling import GeminiRateThrottle
 from apps.core.views import OwnerModelViewSet
 
-from .models import Memory, ProposalStatus, ToolProposal
-from .serializers import MemorySerializer, ToolProposalSerializer
+from .models import AgentRun, Memory, ProposalStatus, ToolProposal
+from .serializers import AgentRunSerializer, MemorySerializer, ToolProposalSerializer
 
 
 class MemoryViewSet(OwnerModelViewSet):
@@ -23,6 +23,18 @@ class MemoryViewSet(OwnerModelViewSet):
 
     queryset = Memory.objects.all()
     serializer_class = MemorySerializer
+
+
+class AgentRunViewSet(OwnerModelViewSet):
+    """Execuções do agente (Fase 9): apenas leitura, isolado por owner.
+
+    Os runs são criados internamente pelo ChatService no loop de agente; aqui o
+    usuário consulta o que o agente fez (passos/iterações), com transparência.
+    """
+
+    queryset = AgentRun.objects.all()
+    serializer_class = AgentRunSerializer
+    http_method_names = ["get", "head", "options"]
 
 
 class ToolProposalViewSet(OwnerModelViewSet):

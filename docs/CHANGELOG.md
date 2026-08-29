@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## [0.9.0] — FASE 9: AGENT
+
+### Adicionado
+- **Loop de agente real** no `ChatService`: em vez de no máximo 2 chamadas, o
+  agente processa tool calls repetidamente até o modelo não pedir mais tools
+  (ou atingir `MAX_TOOL_ITERATIONS`, default 6).
+- **`tool_call_id` propagado**: cada function call recebe um id; o resultado
+  volta com o mesmo id como `function_response` nativo (protocolo confiável
+  para chains) no `GeminiProvider` (`_tool_result_content`).
+- **`AgentRun`** (modelo + migração `0003_agentrun`): registro transparente de
+  cada execução do agente — `query`, `status`, `iterations` e `steps` (tool,
+  iteração, status e resumo). Consultável via `GET /api/assistant/agent-runs/`
+  (read-only, isolado por owner).
+- Resposta do chat agora inclui `agent_run` (metadados + passos) quando o
+  agente executou tools.
+- Frontend: bloco **"Passos executados"** no chat do Assistente (`assistant.js`)
+  com a lista de ferramentas executadas, iterações e status.
+- 4 testes novos (loop multi-iteração, propagação de id, limite de iterações,
+  viewset read-only/owner) — total **168 verdes**.
+
+### Segurança / execução controlada
+- Escritas continuam **sempre** gerando `ToolProposal` pendente (nada executado
+  no loop); leitura executa imediatamente. Nenhuma autonomia irrestrita.
+- Limite de iterações por turno (defensivo contra loops.
+
 ## [0.8.0] — FASE 8: INTELLIGENCE
 
 ### Adicionado

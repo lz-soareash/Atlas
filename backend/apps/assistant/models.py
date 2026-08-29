@@ -77,3 +77,38 @@ class ToolProposal(AtlasModel, OwnerMixin):
 
     def __str__(self):
         return f"{self.get_status_display()}: {self.tool} ({self.entity})"
+
+
+class AgentRunStatus(models.TextChoices):
+    RUNNING = "running", "Em execução"
+    DONE = "done", "Concluído"
+    ERROR = "error", "Erro"
+
+
+class AgentRun(AtlasModel, OwnerMixin):
+    """Registro de uma execução do agente (Fase 9).
+
+    Guarda o rastreio dos passos (tools) que a IA executou durante um turno de
+    chat, para que o usuário possa acompanhar o que o agente fez. Nehum passo
+    de escrita é executado sem aprovação via ToolProposal — o AgentRun é apenas
+    um log transparente.
+    """
+
+    query = models.CharField(max_length=2000)
+    status = models.CharField(
+        max_length=20,
+        choices=AgentRunStatus.choices,
+        default=AgentRunStatus.DONE,
+    )
+    iterations = models.PositiveIntegerField(default=1)
+    steps = models.JSONField(default=list)
+
+    objects = KnowledgeManager()
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Execução do agente"
+        verbose_name_plural = "Execuções do agente"
+
+    def __str__(self):
+        return f"{self.get_status_display()}: {self.query[:60]}"

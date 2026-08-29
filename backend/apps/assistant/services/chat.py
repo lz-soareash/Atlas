@@ -16,7 +16,7 @@ from typing import Any
 from django.conf import settings
 
 from apps.assistant.exceptions import AIError, RateLimitExceededError, TokenLimitError
-from apps.assistant.models import ProposalStatus, ToolProposal
+from apps.assistant.models import AgentRun, AgentRunStatus, ProposalStatus, ToolProposal
 from apps.assistant.prompts import CONTEXT_PROMPT, SYSTEM_PROMPT
 from apps.assistant.providers import resolve_chat_provider
 from apps.assistant.serializers import ToolProposalSerializer
@@ -119,26 +119,17 @@ class ChatService:
             logger.exception("Chat falhou")
             raise AIError(detail=str(exc)) from exc
 
-        # ----- Tools (Fase 7) -----
-        # Se o modelo pediu tools, executa leitura / cria propostas de escrita
-        # e, para leitura, faz uma segunda chamada com os resultados.
+        # ----- Tools / Agente (Fase 7 + Fase 9) -----
+        # Se o modelo pediu tools, executa um loop de agente: processa as calls,
+        # devolve os resultados à IA e repete até não haver mais calls (ou
+        # atingir MAX_TOOL_ITERATIONS). Leitura executa na hora; escrita sempre
+        # gera ToolProposal pendente (execução controlada). Cada passo é
+        # registrado num AgentRun transparente.
+        proposals = []
+        agent_run = None
         tool_calls = result.get("tool_calls") or []
         if tool_calls:
-            tool_results, proposals = self._process_tool_calls(owner, tool_calls, context)
-            if tool_results:
-                provider_messages = provider_messages + self._tool_result_messages(tool_results)
-                try:
-                    result = self.provider.generate_text(
-                        provider_messages,
-                        context=context,
-                        temperature=0.4,
-                        tools=tools,
-                    )
-                except AIError as exc:
-                    raise
-                except Exception as exc:  # noqa: BLE001
-                    logger.exception("Chat (tools) falhou")
-                    raise AIError(detail=str(exc)) from exc
+            agent_run, result, proposals = self._agent_loop(owner, provider_messages, context, tool_calls)
 
         answer = result.get("content", "").strip()
         if not answer and not proposals:
@@ -150,7 +141,7 @@ class ChatService:
         else:
             answer, classification = parse_classification(answer, has_sources=bool(context["sources"]))
 
-        return {
+        response_data = {
             "answer": answer,
             "sources": self._sources_public(context["sources"]),
             "provider": self._provider_name(),
@@ -158,24 +149,110 @@ class ChatService:
             "semantic_available": context.get("semantic_available", False),
             "proposals": ToolProposalSerializer(proposals, many=True).data if proposals else [],
         }
+        if agent_run is not None:
+            response_data["agent_run"] = {
+                "id": str(agent_run.pk),
+                "query": agent_run.query,
+                "status": agent_run.status,
+                "iterations": agent_run.iterations,
+                "steps": agent_run.steps,
+                "created_at": agent_run.created_at.isoformat() if agent_run.created_at else None,
+            }
+        return response_data
 
-    # --- helpers ---
+    def _agent_loop(self, owner, provider_messages, context, initial_tool_calls):
+        """Loop de agente: executa tools, devolve resultados e repete.
 
-    def _process_tool_calls(self, owner, tool_calls, context):
-        """Processa as tools pedidas pelo modelo.
+        Escritas viram ToolProposal (nunca executadas no loop). Leitura executa.
+        Retorna (AgentRun, resultado_final, proposals).
+        """
+        max_iterations = getattr(settings, "MAX_TOOL_ITERATIONS", 6)
+        tools = all_tool_definitions()
+        messages = list(provider_messages)
+        proposals = []
+        all_steps = []
+        iteration = 0
+        tool_calls = initial_tool_calls
+        result = None
 
-        Leitura → executa e retorna resultados para a segunda chamada.
+        run = AgentRun.objects.create(
+            owner=owner,
+            query=self._calls_preview(initial_tool_calls),
+            status=AgentRunStatus.RUNNING,
+            steps=[],
+        )
+
+        while tool_calls and iteration < max_iterations:
+            iteration += 1
+            tool_results, new_proposals, steps = self._process_tool_calls(owner, tool_calls, context, iteration)
+            all_steps.extend(steps)
+            proposals.extend(new_proposals)
+            if tool_results:
+                messages = messages + self._tool_result_messages(tool_results)
+            try:
+                result = self.provider.generate_text(
+                    messages,
+                    context=context,
+                    temperature=0.4,
+                    tools=tools,
+                )
+            except AIError:
+                self._finish_run(run, AgentRunStatus.ERROR, all_steps, iteration)
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Chat (agente) falhou")
+                self._finish_run(run, AgentRunStatus.ERROR, all_steps, iteration)
+                raise AIError(detail=str(exc)) from exc
+            tool_calls = result.get("tool_calls") or []
+
+        if result is None:
+            result = {"content": "", "tool_calls": []}
+
+        run.iterations = iteration
+        run.steps = all_steps
+        run.status = AgentRunStatus.DONE
+        run.save(update_fields=["iterations", "steps", "status", "updated_at"])
+
+        # Escreve de volta o run (steps já persistidos) para o caller reportar.
+        return run, result, proposals
+
+    @staticmethod
+    def _finish_run(run, status, steps, iterations):
+        try:
+            run.iterations = iterations
+            run.steps = steps
+            run.status = status
+            run.save(update_fields=["iterations", "steps", "status", "updated_at"])
+        except Exception:  # noqa: BLE001
+            logger.exception("Falha ao gravar AgentRun")
+
+    @staticmethod
+    def _calls_preview(tool_calls) -> str:
+        parts = []
+        for call in tool_calls or []:
+            parts.append(str(call.get("name", "?")))
+        return ", ".join(parts)[:500] or "(sem tool calls)"
+
+    def _process_tool_calls(self, owner, tool_calls, context, iteration: int):
+        """Processa as tools pedidas pelo modelo; retorna resultados + steps.
+
+        Leitura → executa e retorna resultados para a próxima iteração.
         Escrita → gera uma ToolProposal pendente para confirmação do usuário.
         """
         tool_results = []  # [{"tool_call_id", "name", "content": json}]
         proposals = []
+        steps = []  # [{"iteration", "tool", "kind", "status", "summary"}]
         for call in tool_calls:
+            call_id = call.get("id") or f"{call.get('name', 'tool')}-{len(steps)}"
             name = call.get("name")
             args = call.get("args") or {}
             spec = get_tool_definition(name)
 
             if spec is None:
-                tool_results.append({"name": name, "content": json.dumps({"error": "tool desconhecida"})})
+                tool_results.append(
+                    {"tool_call_id": call_id, "name": name, "content": json.dumps({"error": "tool desconhecida"})}
+                )
+                steps.append({"iteration": iteration, "tool": name, "kind": spec and spec.get("kind"), "status": "error", "summary": "tool desconhecida"})
                 continue
 
             if spec["kind"] == "write" and name in PROPOSAL_TOOLS:
@@ -185,6 +262,7 @@ class ChatService:
                     proposals.append(proposal)
                     tool_results.append(
                         {
+                            "tool_call_id": call_id,
                             "name": name,
                             "content": json.dumps(
                                 {
@@ -196,21 +274,55 @@ class ChatService:
                             ),
                         }
                     )
+                    steps.append(
+                        {
+                            "iteration": iteration,
+                            "tool": name,
+                            "kind": "write",
+                            "status": "ok",
+                            "summary": f"Proposta ({proposal.get_status_display()}): {proposal.summary}",
+                        }
+                    )
                 except ToolError as exc:
-                    tool_results.append({"name": name, "content": json.dumps({"error": exc.user_message})})
+                    tool_results.append({"tool_call_id": call_id, "name": name, "content": json.dumps({"error": exc.user_message})})
+                    steps.append(
+                        {"iteration": iteration, "tool": name, "kind": "write", "status": "error", "summary": exc.user_message}
+                    )
                 continue
 
             # Leitura: executa agora.
             try:
                 result = dispatch_execution(owner, name, args)
-                tool_results.append({"name": name, "content": json.dumps(result)})
+                tool_results.append({"tool_call_id": call_id, "name": name, "content": json.dumps(result)})
+                steps.append(
+                    {"iteration": iteration, "tool": name, "kind": "read", "status": "ok", "summary": self._read_step_summary(result)}
+                )
             except ToolError as exc:
-                tool_results.append({"name": name, "content": json.dumps({"error": exc.user_message})})
+                tool_results.append({"tool_call_id": call_id, "name": name, "content": json.dumps({"error": exc.user_message})})
+                steps.append(
+                    {"iteration": iteration, "tool": name, "kind": "read", "status": "error", "summary": exc.user_message}
+                )
             except Exception as exc:  # noqa: BLE001
                 logger.exception("Tool %s falhou", name)
-                tool_results.append({"name": name, "content": json.dumps({"error": "erro interno"})})
+                tool_results.append({"tool_call_id": call_id, "name": name, "content": json.dumps({"error": "erro interno"})})
+                steps.append(
+                    {"iteration": iteration, "tool": name, "kind": "read", "status": "error", "summary": "erro interno"}
+                )
 
-        return tool_results, proposals
+        return tool_results, proposals, steps
+
+    @staticmethod
+    def _read_step_summary(result: dict) -> str:
+        """Resumo humano de um resultado de tool de leitura."""
+        if isinstance(result, dict) and "results" in result:
+            return f"{len(result['results'])} resultado(s)"
+        if isinstance(result, dict) and "related" in result:
+            return f"{len(result['related'])} relacionados"
+        if isinstance(result, dict) and isinstance(result.get("project"), dict):
+            return f"projeto: {result['project'].get('title', '')}"
+        if isinstance(result, dict) and result.get("id"):
+            return f"entidade {result.get('entity')}: {result.get('title', '')}"
+        return "leitura concluída"
 
     def _create_proposal(self, owner, tool_name, normalized, context) -> ToolProposal:
         entity = normalized.get("entity", "")
@@ -236,7 +348,10 @@ class ChatService:
     def _tool_result_messages(self, tool_results) -> list[dict]:
         msgs = []
         for tr in tool_results:
-            msgs.append({"role": "tool", "name": tr["name"], "content": tr["content"]})
+            msg = {"role": "tool", "name": tr["name"], "content": tr["content"]}
+            if tr.get("tool_call_id"):
+                msg["tool_call_id"] = tr["tool_call_id"]
+            msgs.append(msg)
         return msgs
 
     def _provider_name(self) -> str:

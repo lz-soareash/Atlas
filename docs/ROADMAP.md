@@ -71,8 +71,15 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
       pendentes, itens negligenciados
 - [x] Migração `0001_initial` + 10 testes (total 164 verdes)
 
-## FASE 9 — AGENT
-- Tool chaining, planejamento, execução controlada (sem autonomia irrestrita)
+## FASE 9 — AGENT ✅ (implementada)
+- [x] Loop de agente (várias iterações de tools, não só 2) com
+      `MAX_TOOL_ITERATIONS` configurável (limite defensivo contra loops)
+- [x] `tool_call_id` propagado + `function_response` nativo (chaining confiável)
+- [x] `AgentRun` com rastreio de passos/iterações; `GET /api/assistant/agent-runs/`
+      (read-only, isolado por owner)
+- [x] Escritas continuam exigindo `ToolProposal` (execução controlada; sem
+      autonomia irrestrita)
+- [x] Migração `0003_agentrun` + 4 testes novos (total 168 verdes)
 
 ## FASE 10 — JARVIS
 - Assistente proativo (configurável), voz (STT/TTS), integrações externas,
