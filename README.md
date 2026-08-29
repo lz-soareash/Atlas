@@ -34,7 +34,8 @@ atlas/
 │   │   ├── questions/     # FASE 2: Perguntas (→ Conhecimentos)
 │   │   ├── decisions/     # FASE 2: Decisões
 │   │   ├── experiences/   # FASE 2: Experiências
-│   │   └── dashboard/     # FASE 2: visão agregada (contagens + recentes)
+│   │   ├── dashboard/     # FASE 2: visão agregada (contagens + recentes)
+│   │   └── relationships/ # FASE 3: relacionamentos genéricos + grafo
 │   ├── manage.py
 │   └── pyproject.toml
 ├── frontend/
@@ -103,6 +104,15 @@ python manage.py runserver
   (local por enquanto).
 
 Status de testes: **81 verdes**.
+
+**FASE 3 — RELATIONSHIPS E GRAFO** implementada e testada:
+
+- Modelo genérico `Relationship` (`GenericForeignKey` origin/target) com 11
+  tipos configuráveis e isolamento por owner (anti-IDOR, sem self-loop/duplicatas).
+- `GET /api/graph/` → `{ nodes, edges }` do usuário.
+- Página de **Grafo** no frontend (visualização SVG + criação de relacionamentos).
+
+Status de testes: **95 verdes**.
 
 ## Documentação
 

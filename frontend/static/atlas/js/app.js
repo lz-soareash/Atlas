@@ -8,6 +8,7 @@ import { setLayout, setRoutes, navigate, currentRoute, render } from "./router.j
 import { loginView, registerView } from "./pages/auth.js";
 import { dashboardView, MODULES, placeholderView, notFoundView } from "./pages/app.js";
 import { entityView, ENTITY_CONFIGS } from "./pages/entities.js";
+import { graphView } from "./pages/graph.js";
 import { assistantView } from "./pages/assistant.js";
 import { settingsView } from "./pages/settings.js";
 
@@ -53,6 +54,9 @@ function defineRoutes() {
       }
       if (m.key === "configuracoes") {
         return { path: m.path, key: m.key, auth: true, view: settingsView };
+      }
+      if (m.key === "grafo") {
+        return { path: m.path, key: m.key, auth: true, view: graphView };
       }
       if (ENTITY_CONFIGS[m.key]) {
         return { path: m.path, key: m.key, auth: true, view: () => entityView(m) };

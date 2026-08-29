@@ -20,10 +20,14 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] Migrações + 56 novos testes (total 76 verdes)
 - [x] Frontend: páginas de listagem/criação por entidade
 
-## FASE 3 — RELATIONSHIPS E GRAFO
-- Relacionamentos genéricos (tipos configuráveis) + API `{nodes, edges}`
-- Tipos: RELACIONADO_A, USA, DEPENDE_DE, ORIGINOU, INSPIROU, PARTICIPA_DE,
-  RESOLVE, RESPONDE, AFETA, GEROU, APRENDEU_COM
+## FASE 3 — RELATIONSHIPS E GRAFO ✅ (implementada)
+- [x] Modelo genérico `Relationship` (GenericForeignKey origin/target, owner)
+- [x] Tipos configuráveis (RELACIONADO_A, USA, DEPENDE_DE, ORIGINOU, INSPIROU,
+      PARTICIPA_DE, RESOLVE, RESPONDE, AFETA, GEROU, APRENDEU_COM)
+- [x] CRUD de relacionamentos com validação de owner (anti-IDOR) e unicidade
+- [x] API `GET /api/graph/` → `{nodes, edges}`
+- [x] Frontend: página de grafo (visualização SVG) + criação de relacionamentos
+- [x] Migrações + 14 testes novos (total 95 verdes)
 
 ## FASE 4 — SEARCH + EMBEDDINGS
 - Busca textual + filtros + ordenação

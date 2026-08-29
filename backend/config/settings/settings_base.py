@@ -74,6 +74,19 @@ LOCAL_APPS = [
     "apps.experiences",
     # Dashboard / visão agregada
     "apps.dashboard",
+    # Fase 3 — Relacionamentos + Grafo
+    "apps.relationships",
+]
+
+# Entidades aptas a participar de relacionamentos (app_label, model_name).
+# Extensível: basta adicionar pares aqui para habilitar novas entidades.
+RELATIONSHIP_MODELS = [
+    ("knowledge", "knowledge"),
+    ("ideas", "idea"),
+    ("projects", "project"),
+    ("questions", "question"),
+    ("decisions", "decision"),
+    ("experiences", "experience"),
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

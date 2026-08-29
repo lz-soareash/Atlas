@@ -83,6 +83,40 @@ Campos por entidade (além de `id`, `owner`, `created_at`, `updated_at`,
   `consequences`, `decided_at`.
 - **Experience:** `kind`, `content`, `tags`[].
 
+## Relacionamentos e Grafo (FASE 3)
+
+### `GET|POST /api/relationships/` · `GET|PATCH|DELETE /api/relationships/:id/`
+CRUD de relacionamentos do usuário. `origin` e `target` são `GenericForeignKey`
+representados por `{ "model": "app.model", "id": "uuid" }` (modelos elegíveis
+listados em `settings.RELATIONSHIP_MODELS`). *(autenticado)*
+
+```json
+POST /api/relationships/
+{
+  "type": "USA",
+  "origin": { "model": "projects.project", "id": "<uuid>" },
+  "target": { "model": "knowledge.knowledge", "id": "<uuid>" }
+}
+→ 201 { "id": "...", "type": "USA", "origin": { "model": "...", "id": "..." },
+        "target": { "model": "...", "id": "..." }, "owner": "..." }
+```
+
+Validações: ambas as pontas devem pertencer ao usuário (anti-IDOR), não é
+permitido self-loop e não são permitidas duplicatas (origin, target, type).
+
+Tipos: `RELACIONADO_A`, `USA`, `DEPENDE_DE`, `ORIGINOU`, `INSPIROU`,
+`PARTICIPA_DE`, `RESOLVE`, `RESPONDE`, `AFETA`, `GEROU`, `APRENDEU_COM`.
+
+### `GET /api/graph/`
+Gera o grafo do usuário a partir dos relacionamentos. *(autenticado)*
+```json
+→ 200 {
+  "nodes": [ { "id": "...", "entity": "projects", "label": "Projeto", "title": "Atlas", "emoji": "📁", "route": "/projetos", "status": "active" } ],
+  "edges": [ { "id": "...", "source": "...", "target": "...", "type": "USA", "label": "Usa" } ]
+}
+```
+Arestas com alguma ponta soft-deletada são omitidas.
+
 ## Códigos
 
 - `200 OK`, `201 Created`, `204 No Content`, `400 Bad Request`, `401
@@ -91,6 +125,5 @@ Campos por entidade (além de `id`, `owner`, `created_at`, `updated_at`,
 
 ## API planejada (próximas fases)
 
-- Grafo: `GET /api/graph/` → `{ "nodes": [], "edges": [] }`.
 - Search: busca híbrida.
 - Assistant: `POST /api/assistant/chat/` com fontes, contexto e confirmações.

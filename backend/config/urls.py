@@ -24,4 +24,6 @@ urlpatterns = [
     path("api/", include("apps.experiences.urls")),
     # Dashboard (visão agregada)
     path("api/", include("apps.dashboard.urls")),
+    # Fase 3 — Relacionamentos + Grafo
+    path("api/", include("apps.relationships.urls")),
 ]

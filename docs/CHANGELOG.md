@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [0.3.0] — FASE 3: RELATIONSHIPS E GRAFO
+
+### Adicionado
+- App `relationships`: modelo `Relationship` com `origin`/`target` via
+  `GenericForeignKey`, `type` (11 tipos), herda `AtlasModel + OwnerMixin`.
+- Entidades elegíveis configuráveis em `settings.RELATIONSHIP_MODELS`.
+- `RelationshipViewSet` (CRUD com isolamento por owner, anti-IDOR, sem
+  self-loop e sem duplicatas).
+- `GET /api/graph/` → `{ nodes, edges }` (grafo do usuário; arestas com ponta
+  soft-deletada omitidas).
+- Frontend: página de **Grafo** (`pages/graph.js`) com visualização SVG dos
+  nós/arestas, criação de relacionamentos e exclusão de arestas.
+- Migrações e 14 testes novos (total 95 verdes).
+
 ## [0.2.2] — Frontend separado do backend
 
 ### Movido

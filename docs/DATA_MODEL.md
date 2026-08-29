@@ -63,10 +63,23 @@ Todas as entidades herdam `KnowledgeEntity` (ou seja, `AtlasModel + OwnerMixin`)
 - **Experience:** `kind` (erro/solução/descoberta/experimento/aprendizado),
   `content`, `tags` (JSON).
 
-## Relacionamentos (FASE 3)
+## Relacionamentos (FASE 3, implementada)
 
-Modelo genérico `Relationship` com `origin`/`target` (GenericForeignKey) e
-`type` (enum configurável, extensível). Gera o grafo `{nodes, edges}`.
+### `relationships.Relationship`
+- Herda `AtlasModel + OwnerMixin`.
+- `origin`/`target` — `GenericForeignKey` (`ContentType` + UUID) para as
+  entidades do Knowledge Core, configuradas em `settings.RELATIONSHIP_MODELS`
+  (extensível: basta adicionar pares `app_label, model_name`).
+- `type` — tabela `RelationshipType` (RELACIONADO_A, USA, DEPENDE_DE,
+  ORIGINOU, INSPIROU, PARTICIPA_DE, RESOLVE, RESPONDE, AFETA, GEROU,
+  APRENDEU_COM). Configurável e extensível.
+- Restrição de unicidade (origin, target, type) para evitar duplicatas.
+- A API valida que ambas as pontas pertencem ao usuário (anti-IDOR) e rejeita
+  self-loops e duplicatas.
+
+### Grafo
+`GET /api/graph/` retorna `{ nodes, edges }` a partir dos relacionamentos do
+usuário. Arestas órfãs (uma ponta soft-deletada) são omitidas.
 
 ## Embeddings (FASE 4)
 
