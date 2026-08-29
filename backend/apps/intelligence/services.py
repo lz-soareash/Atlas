@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from datetime import timedelta
+
+from django.utils import timezone
 
 from apps.decisions.models import Decision
 from apps.experiences.models import Experience
@@ -178,3 +181,152 @@ def gap_analysis(owner, *, limit: int = 20):
         if len(gaps) >= limit:
             break
     return {"count": len(gaps), "gaps": gaps}
+
+
+def productivity_insights(owner, *, stale_days: int = 30, limit: int = 10):
+    """Conselho de produtividade baseado no estado real do acervo.
+
+    Detecta apenas o que é factualmente inferível dos dados; NUNCA age sozinho.
+    """
+    now = timezone.now()
+    stale_cutoff = now - timedelta(days=stale_days)
+
+    insights = []
+
+    # 1. Perguntas em aberto (não respondidas), com ênfase nas mais antigas.
+    open_qs = (
+        Question.objects.for_owner(owner)
+        .active()
+        .filter(answered=False)
+        .order_by("updated_at")[:limit]
+    )
+    if open_qs.exists():
+        insights.append(
+            {
+                "title": "Perguntas em aberto",
+                "action": "Responda ou reflita sobre estas perguntas pendentes.",
+                "items": [
+                    {
+                        "entity": "question",
+                        "label": "Pergunta",
+                        "id": str(q.pk),
+                        "title": q.title or q.question_text[:60],
+                        "route": "/perguntas",
+                        "detail": f"aberta há {(now - q.updated_at).days} dias",
+                    }
+                    for q in open_qs
+                ],
+            }
+        )
+
+    # 2. Ideias não convertidas (sem projeto) → decidir o que fazer.
+    open_ideas = (
+        Idea.objects.for_owner(owner)
+        .active()
+        .filter(converted=False)
+        .order_by("updated_at")[:limit]
+    )
+    if open_ideas.exists():
+        insights.append(
+            {
+                "title": "Ideias pendentes",
+                "action": "Decida: converter em projeto ou arquivar.",
+                "items": [
+                    {
+                        "entity": "idea",
+                        "label": "Ideia",
+                        "id": str(i.pk),
+                        "title": i.title,
+                        "route": "/ideias",
+                        "detail": (
+                            "vinculada a projeto"
+                            if i.project_id
+                            else f"sem evolução há {(now - i.updated_at).days} dias"
+                        ),
+                    }
+                    for i in open_ideas
+                ],
+            }
+        )
+
+    # 3. Experiências de erro sem uma solução associada → documentar.
+    errors = Experience.objects.for_owner(owner).active().filter(kind="error")[:limit]
+    if errors.exists():
+        insights.append(
+            {
+                "title": "Erros sem solução documentada",
+                "action": "Registre um workaround/lição para estes erros.",
+                "items": [
+                    {
+                        "entity": "experience",
+                        "label": "Experiência",
+                        "id": str(x.pk),
+                        "title": x.title,
+                        "route": "/experiencias",
+                        "detail": "tipo: erro",
+                    }
+                    for x in errors
+                ],
+            }
+        )
+
+    # 4. Decisões sem conclusão (decisão vazia / sem data) → refletir.
+    pending_decisions = Decision.objects.for_owner(owner).active().filter(decision="")[:limit]
+    if pending_decisions.exists():
+        insights.append(
+            {
+                "title": "Decisões pendentes",
+                "action": "Documente a decisão e sua justificativa.",
+                "items": [
+                    {
+                        "entity": "decision",
+                        "label": "Decisão",
+                        "id": str(d.pk),
+                        "title": d.title,
+                        "route": "/decisoes",
+                        "detail": "sem conclusão registrada",
+                    }
+                    for d in pending_decisions
+                ],
+            }
+        )
+
+    # 5. Itens ativos negligenciados (sem atualização há N dias).
+    stale_buckets = [
+        ("knowledge", "Conhecimento", Knowledge, lambda o: o.title, "/conhecimentos"),
+        ("project", "Projeto", Project, lambda o: o.name or o.title, "/projetos"),
+    ]
+    for entity, label, model, title_fn, route in stale_buckets:
+        stale = (
+            model.objects.for_owner(owner)
+            .active()
+            .filter(status="active", updated_at__lt=stale_cutoff)
+            .order_by("updated_at")[:limit]
+        )
+        for obj in stale:
+            insights.append(
+                {
+                    "title": "Item negligenciado",
+                    "action": "Dê atenção ou arquive — sem atualização há tempo.",
+                    "items": [
+                        {
+                            "entity": entity,
+                            "label": label,
+                            "id": str(obj.pk),
+                            "title": title_fn(obj),
+                            "route": route,
+                            "detail": f"sem edição há {(now - obj.updated_at).days} dias",
+                        }
+                    ],
+                }
+            )
+
+    # Resumo das quantidades para o painel.
+    summary = {
+        "open_questions": Question.objects.for_owner(owner).active().filter(answered=False).count(),
+        "open_ideas": Idea.objects.for_owner(owner).active().filter(converted=False).count(),
+        "errors_without_solution": Experience.objects.for_owner(owner).active().filter(kind="error").count(),
+        "pending_decisions": Decision.objects.for_owner(owner).active().filter(decision="").count(),
+    }
+    return {"count": len(insights), "insights": insights, "summary": summary}
+

@@ -18,7 +18,15 @@
 - Frontend: módulos **Inbox** e **Inteligência** (`pages/intelligence.js`),
   com captura/classificação e listagem das análises.
 - Migração `0001_initial` (InboxItem); app registrado em settings e urls.
-- 7 testes novos (total 161 verdes).
+
+### Aprimorado
+- Tela **Inbox** (`pages/inbox.js`) separada: apenas captura rápida e
+  classificação sugerida.
+- Tela **Inteligência** transformada em camada de **produtividade/conselho**:
+  novo endpoint `GET /api/intelligence/insights/` que sugere próximos passos —
+  perguntas em aberto, ideias não convertidas, erros sem solução, decisões
+  pendentes e itens ativos negligenciados (sem ação automática).
+- 10 testes no app intelligence (161 → 164 verdes).
 
 ## [0.7.0] — FASE 7: TOOLS
 

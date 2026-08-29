@@ -6,6 +6,8 @@ from rest_framework.test import APIClient
 
 from apps.accounts.models import User
 from apps.knowledge.models import Knowledge
+from apps.decisions.models import Decision
+from apps.experiences.models import Experience
 from apps.ideas.models import Idea
 from apps.projects.models import Project
 from apps.questions.models import Question
@@ -86,3 +88,22 @@ class IntelligenceEndpointTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         words = [g["topic"] for g in resp.data["gaps"]]
         self.assertIn("kubernetes", words)
+
+    def test_productivity_insights_open_questions(self):
+        Question.objects.create(owner=self.user, title="Como funciona asyncio?", question_text="")
+        resp = self.client.get(reverse("intelligence-insights"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreaterEqual(resp.data["summary"]["open_questions"], 1)
+        self.assertGreaterEqual(resp.data["count"], 1)
+
+    def test_productivity_insights_open_ideas(self):
+        Idea.objects.create(owner=self.user, title="App de receitas", description="")
+        resp = self.client.get(reverse("intelligence-insights"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreaterEqual(resp.data["summary"]["open_ideas"], 1)
+
+    def test_productivity_insights_errors(self):
+        Experience.objects.create(owner=self.user, title="erro x", kind="error", content="")
+        resp = self.client.get(reverse("intelligence-insights"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertGreaterEqual(resp.data["summary"]["errors_without_solution"], 1)

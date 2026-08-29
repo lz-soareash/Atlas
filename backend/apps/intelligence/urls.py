@@ -10,5 +10,6 @@ urlpatterns = [
     path("intelligence/duplicates/", IntelligenceView.as_view(), name="intelligence-duplicates"),
     path("intelligence/relationship-suggestions/", IntelligenceView.as_view(), name="intelligence-rel-suggestions"),
     path("intelligence/gaps/", IntelligenceView.as_view(), name="intelligence-gaps"),
+    path("intelligence/insights/", IntelligenceView.as_view(), name="intelligence-insights"),
     *router.urls,
 ]

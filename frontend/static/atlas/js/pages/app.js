@@ -66,7 +66,7 @@ export function dashboardView() {
 // Configuração dos módulos (título, descrição, fase e rota).
 export const MODULES = [
   { key: "inbox", path: "/inbox", title: "Inbox", description: "Registre pensamentos soltos; a IA detecta tipo e relações.", phase: 8 },
-  { key: "inteligencia", path: "/inteligencia", title: "Inteligência", description: "Duplicatas, sugestões de vínculos e lacunas de conhecimento.", phase: 8 },
+  { key: "inteligencia", path: "/inteligencia", title: "Inteligência", description: "Próximos passos, duplicatas, vínculos sugeridos e lacunas de conhecimento.", phase: 8 },
   { key: "conhecimentos", path: "/conhecimentos", title: "Conhecimentos", description: "Conhecimentos adquiridos, com resumo, status e nível de domínio.", phase: 2 },
   { key: "ideias", path: "/ideias", title: "Ideias", description: "Ideias que podem evoluir para projetos.", phase: 2 },
   { key: "projetos", path: "/projetos", title: "Projetos", description: "Projetos com tecnologias, decisões e experiências.", phase: 2 },

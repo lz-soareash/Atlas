@@ -1,6 +1,25 @@
-// Página Inteligência (Fase 8) — Inbox + duplicatas + sugestões + gaps.
+// Página Inteligência (Fase 8) — insights, produtividade e conselhos.
+// Tudo aqui é SUGESTÃO baseada nos dados do usuário; nada é criado, movido
+// ou deletado sem ação manual.
 import { api } from "../api.js";
 import { esc } from "../helpers.js";
+
+function renderItems(items, emptyMsg) {
+  if (!items || !items.length) {
+    return `<p class="muted">${esc(emptyMsg)}</p>`;
+  }
+  return items
+    .map(
+      (it) => `
+        <a class="recent-item" href="#${esc(it.route || "")}">
+          <span class="search-body">
+            <span class="search-title">${esc(it.title)}</span>
+            <span class="search-snippet">${esc(it.detail || "")}</span>
+          </span>
+        </a>`
+    )
+    .join("");
+}
 
 export function intelligenceView() {
   return {
@@ -8,18 +27,12 @@ export function intelligenceView() {
       <header class="page-header">
         <h1>Inteligência</h1>
         <span class="badge">Fase 8</span>
+        <p class="muted">Insights e conselhos baseados no seu acervo. <strong>Tudo é sugestão</strong> — nada acontece sem a sua ação.</p>
       </header>
 
       <section class="settings-section">
-        <h2>Inbox</h2>
-        <form class="entity-form" data-inbox-form>
-          <label>Pensamento solto
-            <textarea name="content" placeholder="Registre uma ideia, pergunta, descoberta…" required></textarea>
-          </label>
-          <div class="form-error" data-error></div>
-          <button class="btn primary" type="submit">Salvar no Inbox</button>
-        </form>
-        <div class="recent-list" data-inbox-list></div>
+        <h2>Próximos passos sugeridos</h2>
+        <div data-insights></div>
       </section>
 
       <section class="settings-section">
@@ -38,55 +51,29 @@ export function intelligenceView() {
       </section>
     `,
     async mount({ container }) {
-      const inboxForm = container.querySelector("[data-inbox-form]");
-      const inboxList = container.querySelector("[data-inbox-list]");
+      const insightsEl = container.querySelector("[data-insights]");
       const dupEl = container.querySelector("[data-duplicates]");
       const relEl = container.querySelector("[data-rel]");
       const gapEl = container.querySelector("[data-gaps]");
 
-      async function loadInbox() {
-        const res = await api.get("/inbox/");
-        const items = res.ok ? res.data.results || [] : [];
-        if (!items.length) {
-          inboxList.innerHTML = `<p class="muted">Inbox vazio. Registre algo acima.</p>`;
+      async function loadInsights() {
+        const res = await api.get("/intelligence/insights/");
+        const insights = res.ok ? res.data.insights || [] : [];
+        if (!insights.length) {
+          insightsEl.innerHTML = `<p class="muted">Nada pendente — acervo em dia. Sem sugestões de próximos passos.</p>`;
           return;
         }
-        inboxList.innerHTML = items
+        insightsEl.innerHTML = insights
           .map(
-            (it) => `
-              <div class="recent-item">
-                <span class="search-body">
-                  <span class="search-title">${esc(it.content)}</span>
-                  <span class="search-snippet">classificação: ${esc(it.kind || "—")} → ${esc(it.destination || "—")} · ${esc(it.status)}</span>
-                </span>
-                <button class="btn ghost small" data-classify="${esc(it.id)}">Classificar</button>
-              </div>`
+            (ins) => `
+              <article class="insight-group">
+                <h3>${esc(ins.title)}</h3>
+                <p class="muted">${esc(ins.action)}</p>
+                <div class="recent-list">${renderItems(ins.items, "—")}</div>
+              </article>`
           )
           .join("");
-        inboxList.querySelectorAll("[data-classify]").forEach((btn) => {
-          btn.addEventListener("click", async (e) => {
-            e.target.disabled = true;
-            await api.post(`/inbox/${btn.dataset.classify}/classify/`);
-            loadInbox();
-          });
-        });
       }
-
-      inboxForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const err = inboxForm.querySelector("[data-error]");
-        const content = inboxForm.content.value.trim();
-        if (!content) return;
-        const res = await api.post("/inbox/", { content });
-        if (!res.ok) {
-          err.textContent = "Erro ao salvar no Inbox.";
-          err.style.display = "block";
-          return;
-        }
-        err.style.display = "none";
-        inboxForm.reset();
-        loadInbox();
-      });
 
       async function loadAnalyses() {
         const [db, rel, gaps] = await Promise.all([
@@ -140,7 +127,7 @@ export function intelligenceView() {
           : `<p class="muted">Nenhuma lacuna detectada.</p>`;
       }
 
-      await loadInbox();
+      await loadInsights();
       await loadAnalyses();
     },
   };

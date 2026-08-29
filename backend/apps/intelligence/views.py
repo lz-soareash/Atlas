@@ -16,7 +16,7 @@ from apps.core.views import OwnerModelViewSet
 
 from .models import InboxItem, InboxStatus
 from .serializers import InboxItemSerializer
-from .services import detect_duplicates, gap_analysis, relationship_suggestions
+from .services import detect_duplicates, gap_analysis, productivity_insights, relationship_suggestions
 
 
 class InboxViewSet(OwnerModelViewSet):
@@ -59,4 +59,6 @@ class IntelligenceView(APIView):
             return Response(relationship_suggestions(owner))
         if route == "gaps":
             return Response(gap_analysis(owner))
+        if route == "insights":
+            return Response(productivity_insights(owner))
         return Response({"detail": "Recurso não encontrado."}, status=404)

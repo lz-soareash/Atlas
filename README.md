@@ -177,9 +177,12 @@ Status de testes: **154 verdes**.
 - **Duplicatas**, **sugestões de relacionamento** e **análise de lacunas**
   (gaps) — detectadas por similaridade/vocabulário, sempre apenas sugestões,
   sem merge ou criação automática.
-- App `intelligence`, migração e 7 testes novos.
+- **Produtividade/conselho** (`/inteligencia`): sugestões de próximos passos
+  (perguntas em aberto, ideias pendentes, erros sem solução, decisões
+  pendentes, itens negligenciados) — sempre apenas sugestões.
+- App `intelligence`, migração e testes.
 
-Status de testes: **161 verdes**.
+Status de testes: **164 verdes**.
 
 ## Documentação
 

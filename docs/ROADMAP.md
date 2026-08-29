@@ -66,7 +66,10 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] Detecção de duplicatas (sem merge automático)
 - [x] Sugestão de relacionamentos
 - [x] Gap Analysis (tópicos sem Conhecimento dedicado)
-- [x] Migração `0001_initial` + 7 testes novos (total 161 verdes)
+- [x] Camada de produtividade/conselho (`/api/intelligence/insights/`):
+      perguntas em aberto, ideias pendentes, erros sem solução, decisões
+      pendentes, itens negligenciados
+- [x] Migração `0001_initial` + 10 testes (total 164 verdes)
 
 ## FASE 9 — AGENT
 - Tool chaining, planejamento, execução controlada (sem autonomia irrestrita)

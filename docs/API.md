@@ -255,6 +255,16 @@ Tópicos frequentes em perguntas/projetos/ideias sem um `Knowledge` dedicado.
 → 200 { "count": 1, "gaps": [ { "topic": "kubernetes", "mentions": 2, "suggested": "Conhecimento: kubernetes" } ] }
 ```
 
+### `GET /api/intelligence/insights/`
+**Produtividade/conselho** — sugestões de próximos passos baseadas no estado
+real do acervo (perguntas em aberto, ideias não convertidas, erros sem
+solução, decisões pendentes, itens ativos negligenciados). Nunca age sozinho.
+```json
+→ 200 { "count": 1, "summary": { "open_questions": 2, "open_ideas": 1, ... },
+        "insights": [ { "title": "Perguntas em aberto", "action": "...",
+                        "items": [ { "entity": "question", "id": "...", "title": "...", "route": "/perguntas", "detail": "aberta há 5 dias" } ] } ] }
+```
+
 ## API planejada (próximas fases)
 
 - Agente com tool chaining e planejamento (Fase 9).

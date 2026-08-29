@@ -11,6 +11,7 @@ import { entityView, ENTITY_CONFIGS } from "./pages/entities.js";
 import { graphView } from "./pages/graph.js";
 import { searchView } from "./pages/search.js";
 import { assistantView } from "./pages/assistant.js";
+import { inboxView } from "./pages/inbox.js";
 import { intelligenceView } from "./pages/intelligence.js";
 import { settingsView } from "./pages/settings.js";
 
@@ -54,7 +55,10 @@ function defineRoutes() {
       if (m.key === "assistente") {
         return { path: m.path, key: m.key, auth: true, view: assistantView };
       }
-      if (m.key === "inbox" || m.key === "inteligencia") {
+      if (m.key === "inbox" || m.key === "inbox-captura") {
+        return { path: m.path, key: m.key, auth: true, view: inboxView };
+      }
+      if (m.key === "inteligencia") {
         return { path: m.path, key: m.key, auth: true, view: intelligenceView };
       }
       if (m.key === "configuracoes") {

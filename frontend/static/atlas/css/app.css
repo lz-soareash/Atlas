@@ -518,6 +518,20 @@ textarea {
   padding: 2px 9px;
 }
 
+.insight-group {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: var(--bg-elev);
+}
+
+.insight-group h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
 .recent-title {
   flex: 1;
   overflow: hidden;
