@@ -1,11 +1,51 @@
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.audit.models import AuditLog
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer
 from .throttles import LoginThrottle
+
+
+class LoginView(TokenObtainPairView):
+    """POST /api/auth/token/ — login, agora com throttle anti força bruta.
+
+    Retorna os mesmos tokens JWT do SimpleJWT (access + refresh rotativo).
+    """
+
+    throttle_classes = [LoginThrottle]
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class LogoutView(APIView):
+    """POST /api/auth/logout/ — revoga o refresh token (blacklist).
+
+    Requer o refresh token no corpo. O access token atual expira
+    naturalmente em ACCESS_TOKEN_MINUTES (padrão 60min).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LogoutSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+            token.blacklist()
+        except (TokenError, serializers.ValidationError):
+            return Response(
+                {"detail": "Refresh token inválido ou já revogado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RegisterView(generics.CreateAPIView):

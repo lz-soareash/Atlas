@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [0.9.1] — AUDITORIA DE INTEGRAÇÃO EXTERNA (JARVIS)
+
+### Segurança / prontidão para cliente externo
+- **Logout + token blacklist**: instalado o app `rest_framework_simplejwt.token_blacklist`
+  (migrações aplicadas) e adicionado **`POST /api/accounts/logout/`** que revoga o
+  refresh token (blacklist). Refresh rotativo já era ativo
+  (`ROTATE_REFRESH_TOKENS`/`BLACKLIST_AFTER_ROTATION`), agora efetivamente revogável.
+- **Throttle no login**: `POST /api/auth/token/` agora usa `LoginThrottle` (10/min,
+  por IP), além do `register/`.
+- **Propostas sem create via API**: `POST /api/tools/proposals/` retorna **405**
+  (propostas nascem exclusivamente no ChatService); aprovado/rejeitado continuam
+  pelos endpoints detail.
+
+### Documentação
+- Novo **`docs/JARVIS_INTEGRATION.md`**: contrato de integração externa (endpoints,
+  autenticação, permissões/anti-IDOR, paginação, throttle, códigos de erro, checklist
+  de produção). O Jarvis **não é implementado** — apenas a API fica preparada.
+
+### Testes
+- Adicionados testes de logout (requer auth, blacklist revoga refresh, refresh inválido
+  → 400). Total **171 verdes** (168 + 3).
+
 ## [0.9.0] — FASE 9: AGENT
 
 ### Adicionado

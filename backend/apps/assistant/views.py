@@ -45,6 +45,12 @@ class ToolProposalViewSet(OwnerModelViewSet):
     # Sem create via API (propostas nascem no ChatService); apenas as ações.
     http_method_names = ["get", "patch", "delete", "post"]
 
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Propostas são criadas pelo assistente, não via API."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
     def get_queryset(self):
         return super().get_queryset().filter(status=ProposalStatus.PENDING)
 

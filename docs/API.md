@@ -20,6 +20,9 @@ Gera novo access a partir do refresh. *(público)*
 → 200 { "access": "..." }
 ```
 
+> **Throttle:** `POST /api/auth/token/` e `POST /api/accounts/register/` usam
+> `LoginThrottle` (10/min por IP). Excesso → `429`.
+
 ## Contas
 
 ### `POST /api/accounts/register/`
@@ -40,6 +43,13 @@ Perfil do usuário autenticado. *(autenticado)*
 → 200 { "id": "...", "email": "...", "first_name": "...", "last_name": "...", ... }
 ```
 Não expõe `password` nem `is_superuser`.
+
+### `POST /api/accounts/logout/`
+Revoga o refresh token (blacklist). *(autenticado)*
+```json
+{ "refresh": "..." } → 204
+```
+Refresh inválido/revogado → `400`; sem token → `401`.
 
 ## Knowledge Core (FASE 2)
 

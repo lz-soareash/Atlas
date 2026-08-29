@@ -194,7 +194,7 @@ Status de testes: **164 verdes**.
 - **Execução controlada**: leitura roda na hora; escrita **sempre** gera
   proposta para você aprovar. Sem autonomia irrestrita.
 
-Status de testes: **168 verdes**.
+Status de testes: **171 verdes**.
 
 ## Documentação
 
@@ -204,6 +204,7 @@ Status de testes: **168 verdes**.
 - [ROADMAP.md](docs/ROADMAP.md) — evolução em 10 fases.
 - [DATA_MODEL.md](docs/DATA_MODEL.md) — modelo de dados.
 - [API.md](docs/API.md) — endpoints.
+- [JARVIS_INTEGRATION.md](docs/JARVIS_INTEGRATION.md) — contrato de integração externa.
 - [AI_ARCHITECTURE.md](docs/AI_ARCHITECTURE.md) — Gemini, RAG, embeddings.
 - [CHANGELOG.md](docs/CHANGELOG.md) — histórico de mudanças.
 

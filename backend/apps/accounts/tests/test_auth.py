@@ -135,3 +135,44 @@ class MeTests(TestCase):
         # Não expõe campos sensíveis
         self.assertNotIn("password", resp.data)
         self.assertNotIn("is_superuser", resp.data)
+
+
+class LogoutTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email="logout@atlas.test", password="senha-forte-123"
+        )
+
+    def _get_tokens(self):
+        resp = self.client.post(
+            reverse("token_obtain_pair"),
+            {"email": "logout@atlas.test", "password": "senha-forte-123"},
+            format="json",
+        )
+        return resp.data["access"], resp.data["refresh"]
+
+    def test_logout_requires_authentication(self):
+        resp = APIClient().post(
+            reverse("logout"),
+            {"refresh": "invalido"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_blacklists_refresh_token(self):
+        access, refresh = self._get_tokens()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        resp = self.client.post(reverse("logout"), {"refresh": refresh}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        # Após logout, o refresh revogado não pode mais gerar novo access.
+        refresh_resp = self.client.post(
+            reverse("token_refresh"), {"refresh": refresh}, format="json"
+        )
+        self.assertEqual(refresh_resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_logout_rejects_invalid_refresh(self):
+        access, _ = self._get_tokens()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        resp = self.client.post(reverse("logout"), {"refresh": "nao-e-um-jwt"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
