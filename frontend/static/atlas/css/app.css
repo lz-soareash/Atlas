@@ -679,3 +679,38 @@ textarea {
   background: var(--accent-2);
   margin-right: 6px;
 }
+
+/* ---------- Tools / Propostas (Fase 7) ---------- */
+.chat-proposals {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.proposal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.proposal-detail {
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.proposal-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn.small {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}

@@ -55,10 +55,11 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
       Experiências; explícitas pelo usuário)
 - [x] Migração `0001_initial` + 10 testes novos (total 143 verdes)
 
-## FASE 7 — TOOLS
-- Leitura: search_*, get_entity, get_project_context, find_related_entities
-- Escrita: create_* (exigem confirmação do usuário)
-- Validação de autenticação/ownership/permissões/integridade
+## FASE 7 — TOOLS ✅ (implementada)
+- [x] Leitura: search_*, get_entity, get_project_context, find_related_entities
+- [x] Escrita: create_* (exigem confirmação do usuário, via ToolProposal)
+- [x] Validação de autenticação/ownership/permissões/integridade
+- [x] Migração `0002_toolproposal` + 11 testes novos (total 154 verdes)
 
 ## FASE 8 — INTELLIGENCE
 - Inbox inteligente, detecção de duplicatas (sem merge automático)

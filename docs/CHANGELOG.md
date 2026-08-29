@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [0.7.0] — FASE 7: TOOLS
+
+### Adicionado
+- Camada de **tools** controladas (`apps/assistant/tools/`): a IA nunca acessa o
+  banco diretamente; só usa ferramentas declaradas (function calling).
+  - **Leitura** (execução imediata, ownership validado): `search_entities`,
+    `get_entity`, `get_project_context`, `find_related_entities`.
+  - **Escrita** (exigem confirmação do usuário): `create_idea`, `create_question`,
+    `create_knowledge`, `create_project`, `create_decision`,
+    `create_experience`, `create_relationship`.
+- **ToolProposal** (modelo `assistant.ToolProposal`): toda tool de escrita gera
+  uma proposta `pending` — nada é criado sem aprovação explícita do usuário.
+- Endpoints: `GET|POST? /api/tools/proposals/:id/approve/`, `reject/`, listagem de
+  propostas pendentes (isoladas por owner).
+- `ChatService` integra as tools: se o Gemini pedir tool de leitura, executa e
+  faz segunda chamada com o resultado (multi-turn); se pedir escrita, cria
+  proposta e retorna em `proposals` no payload do chat.
+- Frontend: proposta renderizada no chat com botões **Aprovar/Rejeitar**
+  (aprovação cria a entidade; rejeição descarta).
+- Migração `0002_toolproposal`; documentos de tools em `tools/registry.py`.
+- 11 testes novos (total 154 verdes).
+
 ## [0.6.0] — FASE 6: ATLAS ASSISTANT
 
 ### Adicionado

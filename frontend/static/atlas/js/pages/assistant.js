@@ -86,6 +86,49 @@ export function assistantView() {
         containerEl.insertBefore(meta, containerEl.firstChild);
       }
 
+      function renderProposals(containerEl, proposals) {
+        if (!proposals || !proposals.length) return;
+        const box = document.createElement("div");
+        box.className = "chat-proposals";
+        proposals.forEach((p) => {
+          const row = document.createElement("div");
+          row.className = "proposal-row";
+          const detail = (() => {
+            const t = p.summary || p.entity;
+            return esc(t);
+          })();
+          row.innerHTML = `
+            <span class="proposal-detail">Proposta: ${detail}</span>
+            <div class="proposal-actions">
+              <button class="btn primary small" data-approve="${esc(p.id)}">Aprovar</button>
+              <button class="btn ghost small" data-reject="${esc(p.id)}">Rejeitar</button>
+            </div>
+          `;
+          box.appendChild(row);
+        });
+        containerEl.appendChild(box);
+
+        box.querySelectorAll("[data-approve]").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.target.disabled = true;
+            const id = btn.dataset.approve;
+            const res = await api.post(`/tools/proposals/${id}/approve/`);
+            btn.textContent = res.ok ? "Aprovado ✔" : "Falhou";
+            btn.disabled = false;
+            btn.closest(".proposal-row").querySelector("[data-reject]").disabled = res.ok;
+          });
+        });
+        box.querySelectorAll("[data-reject]").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.target.disabled = true;
+            const id = btn.dataset.reject;
+            await api.post(`/tools/proposals/${id}/reject/`);
+            btn.textContent = "Rejeitado";
+            btn.closest(".proposal-row").querySelector("[data-approve]").disabled = true;
+          });
+        });
+      }
+
       async function send(text) {
         err.style.display = "none";
         addMessage("user", text);
@@ -110,6 +153,7 @@ export function assistantView() {
           pending.querySelector(".chat-bubble").textContent = res.data.answer;
           renderMeta(pending, res.data);
           renderSources(pending, res.data.sources);
+          renderProposals(pending, res.data.proposals);
           history.push({ role: "assistant", content: res.data.answer });
           log.scrollTop = log.scrollHeight;
         } catch (ex) {

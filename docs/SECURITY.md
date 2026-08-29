@@ -36,6 +36,14 @@ conteúdo da nota. Nunca altera as instruções do sistema nem concede permissõ
   stack, SDK ou internals.
 - Sem loops infinitos: retry com máximo de tentativas `GEMINI_MAX_RETRIES`.
 
+### Tools (FASE 7)
+- A IA **não acessa o banco diretamente**: só usa ferramentas controladas
+  (leitura imediata; escrita via proposta com confirmação).
+- Toda tool valida autenticação, ownership (anti-IDOR), parâmetros e
+  integridade (ex.: relacionamento rejeita self-loop e entidade alheia).
+- Escrita nunca é automática: gera `ToolProposal` `pending`; a criação só
+  acontece quando o usuário **aprova** explicitamente.
+
 ### Dados sensíveis
 - `GEMINI_API_KEY` somente no backend e em `.env` (fora do git).
 - `SECRET_KEY` configurável via ambiente.
@@ -44,8 +52,7 @@ conteúdo da nota. Nunca altera as instruções do sistema nem concede permissõ
 ## Controles planejados (próximas fases)
 
 - **Prompt injection:** sandbox por função, system prompt imutável, tools sem
-  privilégios administrativos, validação de parâmetros.
-- **Tools:** verificação de autenticação, ownership, permissões, integridade.
+  privilégios administrativos, validação de parâmetros (aprofundamento).
 - **AI Audit:** registro de pergunta, modelo, tools, entidades, tokens,
   duração e status — **nunca** chaves/tokens/secrets.
 - Modo agente com permissões configuráveis; **sem autonomia irrestrita**.

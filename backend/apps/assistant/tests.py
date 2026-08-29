@@ -12,8 +12,10 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
+from apps.ideas.models import Idea
 from apps.knowledge.models import Knowledge
 from apps.projects.models import Project
+from apps.relationships.models import Relationship
 from apps.search.embeddings import FingerprintEmbeddingProvider
 
 from .exceptions import (
@@ -23,11 +25,13 @@ from .exceptions import (
     RateLimitExceededError,
     TokenLimitError,
 )
-from .models import Memory
+from .models import Memory, ProposalStatus, ToolProposal
 from .providers import DeterministicProvider, GeminiProvider, resolve_chat_provider
 from .retry import retry_with_backoff
 from .services import ChatService
 from .services.chat import parse_classification
+from .tools import dispatch_execution, get_tool_definition
+from .tools.exceptions import EntityNotFoundError, ToolNotFoundError
 
 
 def _givenai():
@@ -43,6 +47,21 @@ class StubProvider(DeterministicProvider):
 
     def generate_text(self, messages, *args, **kwargs):
         return {"content": self.answer, "tool_calls": []}
+
+
+class _ToolCallProvider(DeterministicProvider):
+    """Provider que emite uma tool call na primeira chamada e um texto na segunda."""
+
+    def __init__(self, tool_name, args):
+        self.tool_name = tool_name
+        self.args = args
+        self.first = True
+
+    def generate_text(self, messages, *args, **kwargs):
+        if self.first:
+            self.first = False
+            return {"content": "", "tool_calls": [{"name": self.tool_name, "args": self.args}]}
+        return {"content": "[SUGESTÃO] Criei a proposta.", "tool_calls": []}
 
 
 def _patch_embeddings(testcase):
@@ -408,3 +427,147 @@ class ChatEndpointTests(TestCase):
                 format="json",
             )
         self.assertEqual(resp.status_code, 429)
+
+
+# ---------------- Tools (Fase 7) ----------------
+
+class ReadToolsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        self.other = User.objects.create_user(email="b@atlas.test", password="senha-forte-123")
+        self.k = Knowledge.objects.create(owner=self.user, title="Django REST", content="APIs REST")
+        self.other_k = Knowledge.objects.create(owner=self.other, title="Segredo alheio")
+        _patch_embeddings(self)
+
+    def test_search_entities_isolated(self):
+        res = dispatch_execution(self.user, "search_entities", {"query": "django"})
+        titles = [r["title"] for r in res["results"]]
+        self.assertIn("Django REST", titles)
+        self.assertNotIn("Segredo alheio", titles)
+
+    def test_get_entity(self):
+        res = dispatch_execution(self.user, "get_entity", {"entity": "knowledge", "id": str(self.k.pk)})
+        self.assertEqual(res["title"], "Django REST")
+
+    def test_get_entity_denies_other_owner(self):
+        with self.assertRaises(EntityNotFoundError):
+            dispatch_execution(self.user, "get_entity", {"entity": "knowledge", "id": str(self.other_k.pk)})
+
+    def test_unknown_tool_raises(self):
+        with self.assertRaises(ToolNotFoundError):
+            dispatch_execution(self.user, "nope", {})
+
+    def test_all_tools_have_definitions(self):
+        from .tools import all_tool_definitions
+
+        defs = all_tool_definitions()
+        names = {d["function"]["name"] for d in defs}
+        for name in ("search_entities", "get_entity", "create_idea", "create_relationship"):
+            self.assertIn(name, names)
+
+
+class WriteProposalFlowTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+        _patch_embeddings(self)
+
+    def test_chat_write_tool_creates_proposal_not_entity(self):
+        svc = ChatService(provider=_ToolCallProvider("create_idea", {"title": "App novo"}))
+        data = svc.chat(
+            self.user,
+            [{"role": "user", "content": "crie uma ideia de app"}],
+        )
+        self.assertEqual(data["proposals"][0]["entity"], "idea")
+        self.assertEqual(data["proposals"][0]["status"], "pending")
+        self.assertFalse(Idea.objects.for_owner(self.user).exists())
+
+    def test_approve_executes_idea(self):
+        proposal = ToolProposal.objects.create(
+            owner=self.user,
+            tool="create_idea",
+            entity="idea",
+            summary="ideia: app legal",
+            payload={"title": "App legal", "description": "desc"},
+        )
+        resp = self._approve(proposal)
+        self.assertEqual(resp.status_code, 201)
+        self.assertTrue(Idea.objects.for_owner(self.user).filter(title="App legal").exists())
+        proposal.refresh_from_db()
+        self.assertEqual(proposal.status, ProposalStatus.APPROVED)
+
+    def test_reject_does_not_execute(self):
+        proposal = ToolProposal.objects.create(
+            owner=self.user,
+            tool="create_idea",
+            entity="idea",
+            payload={"title": "Nao quero"},
+        )
+        resp = self.client.post(f"/api/tools/proposals/{proposal.pk}/reject/")
+        self.assertEqual(resp.status_code, 200)
+        proposal.refresh_from_db()
+        self.assertEqual(proposal.status, ProposalStatus.REJECTED)
+        self.assertFalse(Idea.objects.for_owner(self.user).exists())
+
+    def test_approve_twice_conflict(self):
+        proposal = ToolProposal.objects.create(
+            owner=self.user,
+            tool="create_knowledge",
+            entity="knowledge",
+            payload={"title": "Conhecer X"},
+        )
+        self.assertEqual(self._approve(proposal).status_code, 201)
+        # Após resolvida, a proposta pendente não é mais listável (404).
+        self.assertEqual(self._approve(proposal).status_code, 404)
+
+    def test_relationship_proposal_requires_owner(self):
+        other = User.objects.create_user(email="b@atlas.test", password="senha-forte-123")
+        mine = Knowledge.objects.create(owner=self.user, title="Meu")
+        theirs = Knowledge.objects.create(owner=other, title="Alheio")
+        proposal = ToolProposal.objects.create(
+            owner=self.user,
+            tool="create_relationship",
+            entity="relationship",
+            payload={
+                "type": "RELACIONADO_A",
+                "origin": {"entity": "knowledge", "id": str(mine.pk)},
+                "target": {"entity": "knowledge", "id": str(theirs.pk)},
+            },
+        )
+        resp = self.client.post(f"/api/tools/proposals/{proposal.pk}/approve/")
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(Relationship.objects.for_owner(self.user).exists())
+
+    def _approve(self, proposal):
+        return self.client.post(f"/api/tools/proposals/{proposal.pk}/approve/")
+
+
+class ReadToolChatTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email="a@atlas.test", password="senha-forte-123")
+        _patch_embeddings(self)
+
+    def test_read_tool_run_and_reply(self):
+        Knowledge.objects.create(owner=self.user, title="Django REST", content="APIs REST")
+
+        calls = {"n": 0}
+
+        class ReadToolProvider(DeterministicProvider):
+            def generate_text(self, messages, **kwargs):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    return {
+                        "content": "",
+                        "tool_calls": [
+                            {"name": "search_entities", "args": {"query": "django", "limit": 3}}
+                        ],
+                    }
+                # Segunda chamada recebe o resultado da tool em messages.
+                return {"content": "[FATO] Usei a busca.", "tool_calls": []}
+
+        svc = ChatService(provider=ReadToolProvider())
+        data = svc.chat(self.user, [{"role": "user", "content": "procure django"}])
+        self.assertGreater(calls["n"], 1)
+        self.assertEqual(data["classification"]["kind"], "fato")
+        self.assertTrue(data["answer"])

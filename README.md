@@ -157,6 +157,19 @@ Status de testes: **133 verdes**.
 
 Status de testes: **143 verdes**.
 
+**FASE 7 — TOOLS** implementada e testada:
+
+- A IA **não acessa o banco diretamente**: só usa ferramentas controladas.
+- **Leitura** (imediata): busca, detalhes de entidade, contexto de projeto e
+  entidades relacionadas do grafo.
+- **Escrita** (com confirmação): a IA propõe criar ideia, pergunta,
+  conhecimento, projeto, decisão, experiência ou relacionamento — a proposta
+  (`ToolProposal`) surge no chat com **Aprovar/Rejeitar**; só ao aprovar a
+  entidade é criada.
+- Migração e 11 testes novos.
+
+Status de testes: **154 verdes**.
+
 ## Documentação
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitetura geral.

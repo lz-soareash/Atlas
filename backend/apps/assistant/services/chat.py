@@ -9,14 +9,24 @@ O ChatService é agnóstico de provedor: depende apenas do AIProvider.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
 from django.conf import settings
 
 from apps.assistant.exceptions import AIError, RateLimitExceededError, TokenLimitError
-from apps.assistant.providers import resolve_chat_provider
+from apps.assistant.models import ProposalStatus, ToolProposal
 from apps.assistant.prompts import CONTEXT_PROMPT, SYSTEM_PROMPT
+from apps.assistant.providers import resolve_chat_provider
+from apps.assistant.serializers import ToolProposalSerializer
+from apps.assistant.tools import (
+    PROPOSAL_TOOLS,
+    all_tool_definitions,
+    dispatch_execution,
+    get_tool_definition,
+)
+from apps.assistant.tools.exceptions import ToolError
 from apps.search.service import SEARCH_ENTITIES
 
 from .context import build_context
@@ -92,11 +102,14 @@ class ChatService:
 
         provider_messages = self._build_provider_messages(messages, context)
 
+        tools = all_tool_definitions()
+        proposals = []
         try:
             result = self.provider.generate_text(
                 provider_messages,
                 context=context,
                 temperature=0.4,
+                tools=tools,
             )
         except RateLimitExceededError:
             raise
@@ -106,10 +119,34 @@ class ChatService:
             logger.exception("Chat falhou")
             raise AIError(detail=str(exc)) from exc
 
+        # ----- Tools (Fase 7) -----
+        # Se o modelo pediu tools, executa leitura / cria propostas de escrita
+        # e, para leitura, faz uma segunda chamada com os resultados.
+        tool_calls = result.get("tool_calls") or []
+        if tool_calls:
+            tool_results, proposals = self._process_tool_calls(owner, tool_calls, context)
+            if tool_results:
+                provider_messages = provider_messages + self._tool_result_messages(tool_results)
+                try:
+                    result = self.provider.generate_text(
+                        provider_messages,
+                        context=context,
+                        temperature=0.4,
+                        tools=tools,
+                    )
+                except AIError as exc:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception("Chat (tools) falhou")
+                    raise AIError(detail=str(exc)) from exc
+
         answer = result.get("content", "").strip()
-        if not answer:
+        if not answer and not proposals:
             answer = "Não consegui gerar uma resposta. Tente novamente."
             classification = {"kind": "sugestao", "label": "Sugestão (sem fontes no Atlas)", "source_based": False}
+        elif not answer:
+            answer = "Posso criar o que você pediu. Confirme abaixo para eu registrar no Atlas."
+            classification = {"kind": "sugestao", "label": "Sugestão (aguarda confirmação)", "source_based": False}
         else:
             answer, classification = parse_classification(answer, has_sources=bool(context["sources"]))
 
@@ -119,9 +156,88 @@ class ChatService:
             "provider": self._provider_name(),
             "classification": classification,
             "semantic_available": context.get("semantic_available", False),
+            "proposals": ToolProposalSerializer(proposals, many=True).data if proposals else [],
         }
 
     # --- helpers ---
+
+    def _process_tool_calls(self, owner, tool_calls, context):
+        """Processa as tools pedidas pelo modelo.
+
+        Leitura → executa e retorna resultados para a segunda chamada.
+        Escrita → gera uma ToolProposal pendente para confirmação do usuário.
+        """
+        tool_results = []  # [{"tool_call_id", "name", "content": json}]
+        proposals = []
+        for call in tool_calls:
+            name = call.get("name")
+            args = call.get("args") or {}
+            spec = get_tool_definition(name)
+
+            if spec is None:
+                tool_results.append({"name": name, "content": json.dumps({"error": "tool desconhecida"})})
+                continue
+
+            if spec["kind"] == "write" and name in PROPOSAL_TOOLS:
+                try:
+                    normalized = spec["handler"](owner, **args)
+                    proposal = self._create_proposal(owner, name, normalized, context)
+                    proposals.append(proposal)
+                    tool_results.append(
+                        {
+                            "name": name,
+                            "content": json.dumps(
+                                {
+                                    "proposal_id": str(proposal.pk),
+                                    "status": proposal.status,
+                                    "created": False,
+                                    "message": "Proposta criada; aguardando confirmação do usuário.",
+                                }
+                            ),
+                        }
+                    )
+                except ToolError as exc:
+                    tool_results.append({"name": name, "content": json.dumps({"error": exc.user_message})})
+                continue
+
+            # Leitura: executa agora.
+            try:
+                result = dispatch_execution(owner, name, args)
+                tool_results.append({"name": name, "content": json.dumps(result)})
+            except ToolError as exc:
+                tool_results.append({"name": name, "content": json.dumps({"error": exc.user_message})})
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Tool %s falhou", name)
+                tool_results.append({"name": name, "content": json.dumps({"error": "erro interno"})})
+
+        return tool_results, proposals
+
+    def _create_proposal(self, owner, tool_name, normalized, context) -> ToolProposal:
+        entity = normalized.get("entity", "")
+        payload = normalized.get("payload", {})
+        summary = self._proposal_summary(entity, payload)
+        return ToolProposal.objects.create(
+            owner=owner,
+            tool=tool_name,
+            entity=entity,
+            summary=summary,
+            payload=payload,
+            status=ProposalStatus.PENDING,
+        )
+
+    def _proposal_summary(self, entity: str, payload: dict) -> str:
+        title = payload.get("title") or payload.get("name") or ""
+        if entity == "relationship":
+            origin = (payload.get("origin") or {}).get("entity", "?")
+            target = (payload.get("target") or {}).get("entity", "?")
+            return f"{payload.get('type', '')}: {origin} → {target}"
+        return f"{entity}: {title}".strip()
+
+    def _tool_result_messages(self, tool_results) -> list[dict]:
+        msgs = []
+        for tr in tool_results:
+            msgs.append({"role": "tool", "name": tr["name"], "content": tr["content"]})
+        return msgs
 
     def _provider_name(self) -> str:
         name = self.provider.__class__.__name__.lower()

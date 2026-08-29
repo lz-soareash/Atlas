@@ -187,6 +187,37 @@ POST /api/memories/
 - As memórias ativas do usuário são injetadas como contexto no chat
   (`POST /api/assistant/chat/`), limitadas por `MAX_MEMORIES`.
 
+## Tools (FASE 7)
+
+### `POST /api/assistant/chat/` — propostas de escrita
+Quando o assistente usa uma tool de **escrita**, o payload do chat ganha
+`proposals` (propostas pendentes):
+```json
+{
+  "proposals": [
+    { "id": "...", "tool": "create_idea", "entity": "idea",
+      "summary": "idea: app legal", "payload": {"title": "App legal"},
+      "status": "pending", "status_label": "Pendente" }
+  ]
+}
+```
+Nada é criado automaticamente — o usuário aprova/rejeita:
+
+### `POST /api/tools/proposals/:id/approve/` *(autenticado)*
+Executa a proposta aprovada (cria a entidade no Atlas do dono). Retorna
+`201 { "proposal": "...", "result": {...} }`. Tool de escrita sempre valida
+owner/permissões/integridade (ex.: relacionamento não permite acessar entidade
+de outro usuário nem self-loop).
+
+### `POST /api/tools/proposals/:id/reject/`
+Descarta a proposta sem criar nada. Retorna `200`.
+
+### `GET /api/tools/proposals/`
+Lista as propostas **pendentes** do usuário (resolvidas deixam de aparecer).
+
+Tools de **leitura** são executadas internamente pelo chat (multi-turn) e não
+criam propostas.
+
 ## API planejada (próximas fases)
 
-- Tools (leitura/escrita com confirmação) e agente (Fases 7–9).
+- Agente com tool chaining e planejamento (Fases 8–9).

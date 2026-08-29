@@ -55,14 +55,16 @@ Vetores em `pgvector`, associados a qualquer entidade do Knowledge Core.
 
 ## Tools
 
-A IA **não** acessa o banco diretamente. Ferramentas controladas:
+A IA **não** acessa o banco diretamente. Ferramentas controladas (FASE 7):
 
-- **Leitura:** `search_knowledge|projects|ideas|questions|decisions|experiences|relationships`,
-  `get_entity`, `get_project_context`, `get_entity_history`, `find_related_entities`.
-- **Escrita:** `create_idea|question|knowledge|relationship|decision`
-  — exigem **confirmação** do usuário.
+- **Leitura** (execução imediata): `search_entities`, `get_entity`,
+  `get_project_context`, `find_related_entities`.
+- **Escrita** (`create_idea|question|knowledge|project|decision|experience`
+  e `create_relationship`) — **nunca** automática: geram uma `ToolProposal`
+  pendente; a entidade só é criada quando o usuário **aprova** via API.
 
 Toda tool valida autenticação, ownership, permissões, parâmetros e integridade.
+Registro + definições em `tools/registry.py`.
 
 ## Memória
 
