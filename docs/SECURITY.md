@@ -25,6 +25,17 @@ conteúdo da nota. Nunca altera as instruções do sistema nem concede permissõ
   `api_key`, `authorization` são substituídas por `[REDACTED]` (inclusive
   aninhadas).
 
+### Chamadas de IA (FASE 5)
+- `GEMINI_API_KEY` somente no backend e em `.env` (fora do git), nunca no
+  frontend.
+- Retry controlado (backoff + jitter apenas para erros transientes), timeout,
+  rate limit dedicado por usuário (`scope gemini`, além do global), limites
+  por usuário (`MAX_CHAT_MESSAGES`, `MAX_RETRIEVAL_RESULTS`) e controle de
+  tokens (`GEMINI_MAX_TOKENS`).
+- Erros padronizados (`AIError`) — a resposta ao usuário nunca expõe chave,
+  stack, SDK ou internals.
+- Sem loops infinitos: retry com máximo de tentativas `GEMINI_MAX_RETRIES`.
+
 ### Dados sensíveis
 - `GEMINI_API_KEY` somente no backend e em `.env` (fora do git).
 - `SECRET_KEY` configurável via ambiente.
@@ -35,8 +46,6 @@ conteúdo da nota. Nunca altera as instruções do sistema nem concede permissõ
 - **Prompt injection:** sandbox por função, system prompt imutável, tools sem
   privilégios administrativos, validação de parâmetros.
 - **Tools:** verificação de autenticação, ownership, permissões, integridade.
-- **Retry/rate limit/timeout** controlados nas chamadas ao Gemini; limites por
-  usuário; controle de tokens; sem loops infinitos.
 - **AI Audit:** registro de pergunta, modelo, tools, entidades, tokens,
   duração e status — **nunca** chaves/tokens/secrets.
 - Modo agente com permissões configuráveis; **sem autonomia irrestrita**.

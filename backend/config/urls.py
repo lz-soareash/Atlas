@@ -28,4 +28,6 @@ urlpatterns = [
     path("api/", include("apps.relationships.urls")),
     # Fase 4 — Busca híbrida + Embeddings
     path("api/", include("apps.search.urls")),
+    # Fase 5 — Gemini Core (assistente)
+    path("api/", include("apps.assistant.urls")),
 ]

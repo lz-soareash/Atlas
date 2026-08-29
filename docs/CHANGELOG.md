@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## [0.5.0] — FASE 5: GEMINI CORE
+
+### Adicionado
+- App `assistant` (Fase 5 — Gemini Core):
+  - `AIProvider` (contrato em `providers/base.py`) → `GeminiProvider`
+    (`providers/gemini.py`) via SDK oficial `google.genai` (`generate_content`
+    com `system_instruction`, `max_output_tokens`, `temperature`, tools
+    placeholders e extração de `tool_calls`) e `DeterministicProvider`
+    (`providers/deterministic.py`, fallback offline sem chave).
+  - `resolve_chat_provider()`: escolhe automaticamente Gemini quando há
+    `GEMINI_API_KEY`, senão o modo determinístico.
+  - Exceções padronizadas (`exceptions.py`) que nunca expõem detalhes internos
+    (AIError, ProviderUnavailableError, RateLimitExceededError, TokenLimitError,
+    MaxRetriesExceededError).
+  - `retry_with_backoff` (`retry.py`): backoff exponencial + jitter apenas para
+    erros transientes (429/5xx/timeouts).
+  - Prompts (`prompts.py`): system prompt com rastreabilidade ([fonte]) e
+    classificação Fato/Inferência/Sugestão/Informação externa.
+  - `ChatService` (`services/chat.py`) + `build_context` (`services/context.py`):
+    recupera contexto do usuário via busca híbrida (Fase 4) + grafo (Fase 3),
+    sanitiza/limita histórico, e retorna `{ answer, sources, provider,
+    classification, semantic_available }`.
+  - `POST /api/assistant/chat/` (`views.py`) com throttle `gemini` por usuário
+    (`throttling.py`), além do throttle global do DRF.
+- Settings: `GEMINI_MODEL` (padrão `gemini-3.6-flash`), `GEMINI_MAX_RETRIES`,
+  `GEMINI_TIMEOUT`, `GEMINI_MAX_TOKENS`, `GEMINI_RATE_LIMIT_PER_MIN`,
+  `MAX_CHAT_MESSAGES`, `MAX_RETRIEVAL_RESULTS`; `.env.example` atualizado.
+- Embeddings: `EMBEDDING_MODEL=gemini-embedding-001` (3072 dimensões) e
+  `EMBEDDING_DIM=3072`; default ajustado no `GeminiEmbeddingProvider`.
+- Frontend: página do Assistente (`pages/assistant.js`) consome o chat real —
+  bolhas com estado "digitando", fontes clicáveis, classificação e
+  provedor (gemini/local); estilos de chat em `app.css`.
+- Dependência `google-genai` declarada em `requirements.txt`/`pyproject.toml`
+  (substitui o SDK antigo `google-generativeai`).
+- 22 testes novos (total 133 verdes).
+
 ## [0.4.0] — FASE 4: SEARCH + EMBEDDINGS
 
 ### Adicionado

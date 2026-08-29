@@ -125,6 +125,24 @@ Status de testes: **95 verdes**.
 
 Status de testes: **111 verdes**.
 
+**FASE 5 — GEMINI CORE** implementada e testada:
+
+- `AIProvider` (contrato) → `GeminiProvider` via SDK oficial (`google.genai`),
+  com controle de tokens, timeout, retry com backoff + jitter e classificação
+  de erros sem vazar detalhes internos; fallback `DeterministicProvider` offline.
+- `ChatService` (services) monta contexto recuperado do Atlas (busca híbrida da
+  Fase 4 + arestas do grafo) e responde com **fontes rastreáveis** e
+  **classificação** (Fato/Sugestão).
+- `POST /api/assistant/chat/` com rate limit dedicado por usuário
+  (throttle `gemini`, além do global) e `MAX_CHAT_MESSAGES`.
+- Retry (histórico limitado), `GEMINI_MAX_RETRIES/TIMEOUT/MAX_TOKENS`,
+  `GEMINI_RATE_LIMIT_PER_MIN`, `MAX_RETRIEVAL_RESULTS` configuráveis no `.env`.
+- Página do Assistente no frontend (`/assistente`): chat real com fontes
+  clicáveis, classificação e indicação do provedor (gemini/local).
+- Dependência `google-genai` declarada (requirements/pyproject).
+
+Status de testes: **133 verdes**.
+
 ## Documentação
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) — arquitetura geral.

@@ -30,6 +30,13 @@ class SearchEndpointTests(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(self.user)
         self.url = reverse("search")
+        # Sem chamadas reais à API: usa o fallback determinístico de embeddings.
+        patcher = mock.patch(
+            "apps.search.service.resolve_embedding_provider",
+            return_value=FingerprintEmbeddingProvider(),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_requires_auth(self):
         resp = APIClient().get(self.url, {"q": "django"})
@@ -103,7 +110,7 @@ class EmbeddingProvidersTests(TestCase):
         a = p.embed_documents(["django rest"])
         b = p.embed_documents(["django rest"])
         self.assertEqual(a, b)
-        self.assertEqual(len(a[0]), 768)
+        self.assertEqual(len(a[0]), FingerprintEmbeddingProvider.dim)
 
     def test_cosine_similarity_between_related_texts(self):
         p = FingerprintEmbeddingProvider()
@@ -141,5 +148,6 @@ class EmbeddingProvidersTests(TestCase):
             client.models.embed_content.assert_called_once()
 
     def test_gemini_raises_without_key(self):
-        p = GeminiEmbeddingProvider(api_key="")
-        self.assertFalse(p.available())
+        with mock.patch("apps.search.embeddings.settings.GEMINI_API_KEY", ""):
+            p = GeminiEmbeddingProvider(api_key=None)
+            self.assertFalse(p.available())

@@ -147,6 +147,29 @@ Busca híbrida sobre as 6 entidades do usuário. *(autenticado)*
 - Isolado por owner; entidades soft-deleted são excluídas.
 - `source`: `textual` (sem provider) ou `semantic` (híbrido).
 
+## Assistant (FASE 5)
+
+### `POST /api/assistant/chat/`
+Chat com contexto do Atlas (RAG). *(autenticado — throttle `gemini`)*
+```json
+{ "messages": [ { "role": "user"|"assistant", "content": "o que sei sobre django?" } ] }
+→ 200 {
+  "answer": "Você tem 1 conhecimento sobre Django: ...",
+  "sources": [ { "id": "...", "entity": "knowledge", "label": "Conhecimento",
+                 "title": "Django REST Framework", "route": "/conhecimentos",
+                 "score": 8.83 } ],
+  "provider": "gemini" | "deterministic",
+  "classification": { "kind": "fato"|"sugestao", "label": "...", "source_based": true },
+  "semantic_available": true
+}
+```
+- Recupera contexto relevante do usuário (busca híbrida + grafo), sanitiza e
+  limita o histórico (`MAX_CHAT_MESSAGES`) e responde citando as fontes.
+- Sem `GEMINI_API_KEY` usa o `DeterministicProvider` (modo offline): `provider:
+  "deterministic"`.
+- Erros mapeados: `429` (rate limit atingido), `400` (mensagens inválidas/limite
+  de tokens), `502` (IA indisponível). Detalhes internos nunca são expostos.
+
 ## API planejada (próximas fases)
 
-- Assistant: `POST /api/assistant/chat/` com fontes, contexto e confirmações.
+- Memória, tools e agente (Fases 6–9).

@@ -330,6 +330,31 @@ input:focus {
   flex: 1;
 }
 
+.chat-bubble.typing {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.chat-meta {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+
+.chat-sources {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-sources-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
 /* ---------- Entidades (Fase 2) ---------- */
 textarea,
 select {

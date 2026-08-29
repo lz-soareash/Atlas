@@ -96,7 +96,7 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
 
     def __init__(self, api_key: str | None = None, model: str | None = None):
         self.api_key = api_key or getattr(settings, "GEMINI_API_KEY", "")
-        self.model = model or getattr(settings, "EMBEDDING_MODEL", "text-embedding-004")
+        self.model = model or getattr(settings, "EMBEDDING_MODEL", "gemini-embedding-001")
 
     def available(self) -> bool:
         return bool(self.api_key)

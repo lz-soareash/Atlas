@@ -39,10 +39,13 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] Frontend: página de Busca (`/busca`)
 - [x] Migrações não necessárias + 16 testes novos (total 111 verdes)
 
-## FASE 5 — GEMINI CORE
-- `AIProvider → GeminiProvider` (implementação via SDK oficial)
-- `services/` (chat, context, retrieval, memory, reasoning, agent)
-- Prompts, tratamento de erros, retry, timeout, rate limit, controle de tokens
+## FASE 5 — GEMINI CORE ✅ (implementada)
+- [x] `AIProvider → GeminiProvider` (implementação via SDK oficial)
+- [x] `services/` (chat, context) — chat RAG com fontes rastreáveis e
+      classificação da resposta
+- [x] Prompts, tratamento de erros, retry, timeout, rate limit, controle de tokens
+- [x] `POST /api/assistant/chat/` + frontend do Assistente
+- [x] Migrações não necessárias + 22 testes novos (total 133 verdes)
 
 ## FASE 6 — ATLAS ASSISTANT
 - Chat com RAG real (Query analysis → Retrieval → Context Builder → Gemini)

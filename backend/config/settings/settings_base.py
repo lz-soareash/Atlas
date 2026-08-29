@@ -78,6 +78,8 @@ LOCAL_APPS = [
     "apps.relationships",
     # Fase 4 — Busca híbrida + Embeddings
     "apps.search",
+    # Fase 5 — Gemini Core (assistente)
+    "apps.assistant",
 ]
 
 # Entidades aptas a participar de relacionamentos (app_label, model_name).
@@ -95,10 +97,24 @@ RELATIONSHIP_MODELS = [
 # Chave da API Gemini. Fica EXCLUSIVAMENTE no backend (.env), nunca no
 # frontend. Sem a chave, a busca semântica usa o fallback determinístico.
 GEMINI_API_KEY = env_str("GEMINI_API_KEY", "")
-# Modelo de embeddings da Gemini (dimensão 768 para text-embedding-004).
-EMBEDDING_MODEL = env_str("EMBEDDING_MODEL", "text-embedding-004")
+# Modelo de chat da Gemini (validado com a API real).
+GEMINI_MODEL = env_str("GEMINI_MODEL", "gemini-3.6-flash")
+# Modelo de embeddings da Gemini (3072 dimensões p/ gemini-embedding-001).
+EMBEDDING_MODEL = env_str("EMBEDDING_MODEL", "gemini-embedding-001")
 # Dimensão dos vetores do fallback determinístico.
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = 3072
+
+# --- Infraestrutura da IA (Fase 5) ---
+# Retry, timeout e limites de tokens/modelo para chamadas do Gemini.
+GEMINI_MAX_RETRIES = int(env_str("GEMINI_MAX_RETRIES", "3"))
+GEMINI_TIMEOUT = float(env_str("GEMINI_TIMEOUT", "45"))
+GEMINI_MAX_TOKENS = int(env_str("GEMINI_MAX_TOKENS", "1024"))
+# Limite de requisições de chat por usuário por minuto (rate limiting).
+GEMINI_RATE_LIMIT_PER_MIN = int(env_str("GEMINI_RATE_LIMIT_PER_MIN", "20"))
+# Máximo de mensagens no histórico de uma conversa de chat.
+MAX_CHAT_MESSAGES = int(env_str("MAX_CHAT_MESSAGES", "24"))
+# Número máximo de fontes/resultados de contexto trazidos pelo retrieval.
+MAX_RETRIEVAL_RESULTS = int(env_str("MAX_RETRIEVAL_RESULTS", "6"))
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -201,6 +217,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env_str("THROTTLE_ANON", "20/min"),
         "user": env_str("THROTTLE_USER", "100/min"),
+        "gemini": f"{env_str('GEMINI_RATE_LIMIT_PER_MIN', '20')}/min",
     },
 }
 
