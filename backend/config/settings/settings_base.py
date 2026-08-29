@@ -76,6 +76,8 @@ LOCAL_APPS = [
     "apps.dashboard",
     # Fase 3 — Relacionamentos + Grafo
     "apps.relationships",
+    # Fase 4 — Busca híbrida + Embeddings
+    "apps.search",
 ]
 
 # Entidades aptas a participar de relacionamentos (app_label, model_name).
@@ -88,6 +90,15 @@ RELATIONSHIP_MODELS = [
     ("decisions", "decision"),
     ("experiences", "experience"),
 ]
+
+# --- Gemini / Embeddings (Fase 4) ---
+# Chave da API Gemini. Fica EXCLUSIVAMENTE no backend (.env), nunca no
+# frontend. Sem a chave, a busca semântica usa o fallback determinístico.
+GEMINI_API_KEY = env_str("GEMINI_API_KEY", "")
+# Modelo de embeddings da Gemini (dimensão 768 para text-embedding-004).
+EMBEDDING_MODEL = env_str("EMBEDDING_MODEL", "text-embedding-004")
+# Dimensão dos vetores do fallback determinístico.
+EMBEDDING_DIM = 768
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

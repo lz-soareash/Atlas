@@ -35,7 +35,8 @@ atlas/
 │   │   ├── decisions/     # FASE 2: Decisões
 │   │   ├── experiences/   # FASE 2: Experiências
 │   │   ├── dashboard/     # FASE 2: visão agregada (contagens + recentes)
-│   │   └── relationships/ # FASE 3: relacionamentos genéricos + grafo
+│   │   ├── relationships/ # FASE 3: relacionamentos genéricos + grafo
+│   │   └── search/        # FASE 4: busca híbrida + embeddings
 │   ├── manage.py
 │   └── pyproject.toml
 ├── frontend/
@@ -113,6 +114,16 @@ Status de testes: **81 verdes**.
 - Página de **Grafo** no frontend (visualização SVG + criação de relacionamentos).
 
 Status de testes: **95 verdes**.
+
+**FASE 4 — SEARCH + EMBEDDINGS** implementada e testada:
+
+- Busca híbrida `GET /api/search/` (textual + semântica) nas 6 entidades,
+  isolada por owner, com ranking de relevância.
+- `EmbeddingProvider` com `GeminiEmbeddingProvider` (via `GEMINI_API_KEY`) e
+  fallback determinístico offline.
+- Página de **Busca** no frontend (`/busca`).
+
+Status de testes: **111 verdes**.
 
 ## Documentação
 

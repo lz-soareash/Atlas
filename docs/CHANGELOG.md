@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [0.4.0] — FASE 4: SEARCH + EMBEDDINGS
+
+### Adicionado
+- App `search`: serviço de busca híbrida com ranking de relevância sobre as
+  6 entidades do Knowledge Core (prefixo no título > subtítulo > corpo),
+  isolado por owner e excluindo soft-deleted.
+- `GET /api/search/?q=&type=&limit=` — endpoint unificado (aceita `type` em
+  português) que combina score textual com similaridade de cosseno.
+- `EmbeddingProvider` (contrato) com `GeminiEmbeddingProvider` (google.genai,
+  por `GEMINI_API_KEY`, `EMBEDDING_MODEL`) e `FingerprintEmbeddingProvider`
+  (fallback determinístico/offline em `EMBEDDING_DIM` dimensões).
+- Frontend: página de **Busca** (`pages/search.js`, rota `/busca`) com busca
+  por termo/tipo e resultados clicáveis.
+- Settings: `GEMINI_API_KEY`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`;
+  `.env.example` atualizado. `google.genai` já listado.
+- 16 testes novos (total 111 verdes).
+
 ## [0.3.0] — FASE 3: RELATIONSHIPS E GRAFO
 
 ### Adicionado

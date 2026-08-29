@@ -26,4 +26,6 @@ urlpatterns = [
     path("api/", include("apps.dashboard.urls")),
     # Fase 3 — Relacionamentos + Grafo
     path("api/", include("apps.relationships.urls")),
+    # Fase 4 — Busca híbrida + Embeddings
+    path("api/", include("apps.search.urls")),
 ]

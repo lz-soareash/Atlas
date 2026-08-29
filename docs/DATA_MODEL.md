@@ -83,5 +83,22 @@ usuário. Arestas órfãs (uma ponta soft-deletada) são omitidas.
 
 ## Embeddings (FASE 4)
 
+- `EmbeddingProvider` — contrato abstrato (`available`, `embed_documents`).
+- `GeminiEmbeddingProvider` — embeddings reais via Google (`google.genai`),
+  disponível quando `GEMINI_API_KEY` está configurada (`EMBEDDING_MODEL`,
+  padrão `text-embedding-004`).
+- `FingerprintEmbeddingProvider` — fallback determinístico e offline (hashing
+  de features em vetor de `EMBEDDING_DIM` dimensões); usado em dev/testes e
+  quando não há chave.
+
+### Busca híbrida
+`GET /api/search/` busca nas 6 entidades do usuário combinando score textual
+(relevância: prefixo no título > subtítulo > corpo) e similaridade de cosseno
+sobre embeddings, quando um provider está disponível. Isolado por owner
+(anti-IDOR); entidades soft-deleted são excluídas. Resultado normalizado:
+`{entity, label, id, title, snippet, score, route, status, source}`.
+
+## FASE 5 — GEMINI CORE (planejada)
+
 Coluna `vector` (`pgvector`) associada às entidades; endereços de busca
 semântica com embeddings do Gemini (via `GeminiEmbeddingProvider`).

@@ -123,7 +123,30 @@ Arestas com alguma ponta soft-deletada são omitidas.
   Unauthorized`, `404 Not Found`, `405` (método não permitido), `429`
   (throttled).
 
+## Busca (FASE 4)
+
+### `GET /api/search/?q=...&type=...&limit=...`
+Busca híbrida sobre as 6 entidades do usuário. *(autenticado)*
+```json
+→ 200 {
+  "query": "django",
+  "semantic_available": true,
+  "results": [
+    { "id": "...", "entity": "knowledge", "label": "Conhecimento",
+      "title": "Django REST Framework", "snippet": "APIs REST com Django...",
+      "score": 8.83, "route": "/conhecimentos", "status": "active",
+      "source": "semantic" }
+  ]
+}
+```
+- `q` (obrigatório, mas vazio → `results: []`), `type` (chave da entidade ou
+  alias em português, ex.: `knowledge`/`conhecimento`), `limit` (1–100).
+- Combina score textual (prefixo no título > subtítulo > corpo) com
+  similaridade de cosseno sobre embeddings quando um provider está disponível
+  (Gemini se `GEMINI_API_KEY`, senão fallback determinístico).
+- Isolado por owner; entidades soft-deleted são excluídas.
+- `source`: `textual` (sem provider) ou `semantic` (híbrido).
+
 ## API planejada (próximas fases)
 
-- Search: busca híbrida.
 - Assistant: `POST /api/assistant/chat/` com fontes, contexto e confirmações.

@@ -29,10 +29,15 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
 - [x] Frontend: página de grafo (visualização SVG) + criação de relacionamentos
 - [x] Migrações + 14 testes novos (total 95 verdes)
 
-## FASE 4 — SEARCH + EMBEDDINGS
-- Busca textual + filtros + ordenação
-- `EmbeddingProvider → GeminiEmbeddingProvider` (embeddings do Google)
-- `pgvector` e busca semântica; combinação textual + semântica + grafo
+## FASE 4 — SEARCH + EMBEDDINGS ✅ (implementada)
+- [x] Busca textual + filtros + ordenação/ranking de relevância multi-entidade
+- [x] `EmbeddingProvider` (contrato) → `GeminiEmbeddingProvider` (google.genai,
+      por `GEMINI_API_KEY`) + `FingerprintEmbeddingProvider` (fallback
+      determinístico, sem API)
+- [x] `GET /api/search/` unificado sobre as 6 entidades, isolado por owner
+- [x] Combinação textual + semântica (score híbrido) quando provider disponível
+- [x] Frontend: página de Busca (`/busca`)
+- [x] Migrações não necessárias + 16 testes novos (total 111 verdes)
 
 ## FASE 5 — GEMINI CORE
 - `AIProvider → GeminiProvider` (implementação via SDK oficial)

@@ -9,6 +9,7 @@ import { loginView, registerView } from "./pages/auth.js";
 import { dashboardView, MODULES, placeholderView, notFoundView } from "./pages/app.js";
 import { entityView, ENTITY_CONFIGS } from "./pages/entities.js";
 import { graphView } from "./pages/graph.js";
+import { searchView } from "./pages/search.js";
 import { assistantView } from "./pages/assistant.js";
 import { settingsView } from "./pages/settings.js";
 
@@ -57,6 +58,9 @@ function defineRoutes() {
       }
       if (m.key === "grafo") {
         return { path: m.path, key: m.key, auth: true, view: graphView };
+      }
+      if (m.key === "busca") {
+        return { path: m.path, key: m.key, auth: true, view: searchView };
       }
       if (ENTITY_CONFIGS[m.key]) {
         return { path: m.path, key: m.key, auth: true, view: () => entityView(m) };
