@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## [0.10.0] — FASE 10: COGNITIVE ENGINE + JARVIS API
+
+### Adicionado (app `cognitive`)
+- **Auth serviço-a-serviço**: `UserType` (`HUMAN`/`SERVICE`) e `ServiceCredential`
+  com chave `svc_...`, hash HMAC-SHA256 com `SECRET_KEY` (nunca guarda a chave
+  crua), `key_hint`, `rotate`/`revoke` e autenticação via **`X-API-Key`**
+  (`ServiceKeyAuthentication`, adicionada ao lado do JWT em
+  `DEFAULT_AUTHENTICATION_CLASSES`). Contas `service` gerem as próprias chaves
+  em `GET|POST /api/service-credentials/` (+ `rotate/`/`revoke/`).
+- **Sessões cognitivas persistentes** (`CognitiveSession` + `SessionMessage`):
+  `project_context`, `metadata`, histórico de turnos e `close()`.
+- **`POST /api/cognitive/sessions/:id/query/`**: raciocínio **read-only** sobre
+  o conhecimento do Atlas, reutilizando `build_context` (fontes + grafo +
+  memórias) + `project_context` da sessão, provider com fallback
+  (Gemini → DeterministicProvider) e `parse_classification`. Resposta
+  `{answer, sources, classification, provider, semantic_available}`.
+- **Eventos de integração** (`IntegrationEvent`) com **whitelist extensível**
+  (`jarvis.notify`, `jarvis.sync_request`, `jarvis.status`) em
+  `apps/cognitive/integration.py`; tipos desconhecidos → `400` (anti
+  prompt-injection). Payload limitado a 100 chaves.
+- **Observabilidade** via `AuditLog` (sem secrets) em todas as rotas
+  `COGNITIVE_*` e `INTEGRATION_EVENT`.
+- Migração `0001_initial`; app registrado em settings e `config/urls.py`.
+
+### Regras (Fase 10)
+- **Sem voz/STT/TTS**, **sem controle de PC**, **sem automação proativa** no
+  Atlas — esses recursos pertencem ao cliente Jarvis externo.
+- **Read-only**: o cognitive não executa tools de escrita — escritas continuam
+  exigindo aprovação do usuário via `ToolProposal` (não há como contornar).
+- **Sem dependência do Jarvis**: Atlas funciona sozinho.
+
+### Documentação
+- Novo **`docs/COGNITIVE_ENGINE.md`** (arquitetura do motor + auth de serviço +
+  whitelist + observabilidade + testes).
+- **`docs/JARVIS_INTEGRATION.md`** atualizado: fluxo de credencial de serviço,
+  header `X-API-Key`, inventário `5.8` (cognitive/sessions/events), tabela de
+  permissões.
+- **`docs/API.md`** e **`docs/ROADMAP.md`** atualizados para a Fase 10.
+
+### Testes
+- 16 testes de `ServiceCredential` (hash, rotação, revogação, anti-IDOR,
+  X-API-Key, fallback JWT) + 15 testes de `cognitive` (sessão CRUD, query
+  determinística, close, anti-IDOR, whitelist, conta de serviço, AuditLog sem
+  secrets). Total **202 verdes**.
+
 ## [0.9.1] — AUDITORIA DE INTEGRAÇÃO EXTERNA (JARVIS)
 
 ### Segurança / prontidão para cliente externo

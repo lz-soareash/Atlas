@@ -83,6 +83,8 @@ LOCAL_APPS = [
     "apps.assistant",
     # Fase 8 — Intelligence (inbox, duplicatas, sugestões, gaps)
     "apps.intelligence",
+    # Fase 10 — Cognitive Engine + Integração Jarvis
+    "apps.cognitive",
 ]
 
 # Entidades aptas a participar de relacionamentos (app_label, model_name).
@@ -208,6 +210,7 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.accounts.authentication.ServiceKeyAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",

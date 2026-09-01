@@ -309,6 +309,71 @@ solução, decisões pendentes, itens ativos negligenciados). Nunca age sozinho.
                         "items": [ { "entity": "question", "id": "...", "title": "...", "route": "/perguntas", "detail": "aberta há 5 dias" } ] } ] }
 ```
 
+## Cognitive Engine + JARVIS API (FASE 10)
+
+### Auth de serviço (X-API-Key)
+Contas `service` autenticam com o cabeçalho `X-API-Key: <chave>` (em vez de
+`Bearer`) para chamadas serviço-a-serviço. Contas humanas continuam usando JWT.
+Ambas sofrem isolamento por `owner` (anti-IDOR).
+
+### `GET|POST /api/service-credentials/`
+Gerencia chaves de API da própria conta de serviço. *(autenticado)*
+```json
+POST /api/service-credentials/
+→ 201 { "id": "...", "name": "...", "key": "svc_<novo>", "key_hint": "svc_…abcd", "is_active": true, "last_used_at": null }
+```
+- `POST /api/service-credentials/:id/rotate/` — troca a chave (novo `key`).
+- `POST /api/service-credentials/:id/revoke/` — desativa a chave.
+- A chave crua (`key`) só aparece na criação/rotação; depois só o `key_hint`.
+
+### `GET|POST /api/cognitive/sessions/`
+Sessões cognitivas persistentes do usuário. *(autenticado — JWT ou X-API-Key)*
+```json
+POST /api/cognitive/sessions/
+{ "name": "Análise Atlas", "project_context": { "objetivo": "entender a arquitetura" } }
+→ 201 { "id": "...", "name": "...", "project_context": {...}, "metadata": {},
+        "is_active": true, "closed_at": null, "messages": [] }
+```
+- `GET /api/cognitive/sessions/:id/` — detalhe com `messages` (histórico).
+- Campos: `name`, `project_context` (JSON), `metadata` (JSON); `is_active`/
+  `closed_at` são read-only.
+
+### `POST /api/cognitive/sessions/:id/query/`
+Pergunta a uma sessão; retorna resposta estruturada e persiste o turno.
+*(autenticado)*
+```json
+{ "query": "quais decisões dependem do projeto Atlas?" }
+→ 200 {
+  "answer": "Há 2 decisões ligadas…",
+  "sources": [ { "id": "...", "entity": "decision", "label": "Decisão",
+                 "title": "…", "route": "/decisoes", "score": 8.8 } ],
+  "classification": { "kind": "fato", "label": "Fato", "source_based": true },
+  "provider": "gemini" | "deterministic",
+  "semantic_available": true,
+  "session_id": "<uuid>"
+}
+```
+- `answer`: análise (read-only, sem tools — não cria nem modifica nada).
+- `sources`: itens recuperados do Atlas do dono da sessão.
+- Falha do provedor de IA → `502`. Sessão encerrada → `400`.
+
+### `POST /api/cognitive/sessions/:id/close/`
+Encerra a sessão (`is_active: false`, preenche `closed_at`). *(autenticado)*
+
+### `GET|POST /api/integration/events/`
+Eventos de integração externa (ex.: Jarvis → Atlas). *(autenticado)*
+```json
+POST /api/integration/events/
+{ "type": "jarvis.sync_request", "payload": { "since": "2026-08-01" } }
+→ 201 { "id": "...", "type": "jarvis.sync_request", "payload": {...},
+        "processed": false, "error": null, "created_at": "..." }
+```
+- `type` é validado contra a whitelist (`jarvis.notify`, `jarvis.sync_request`,
+  `jarvis.status`) definida em `apps/cognitive/integration.py` (extensível).
+- Tipo desconhecido → `400` (nunca processado implicitamente).
+- `payload` limitado a 100 chaves. `processed`/`error` são read-only.
+
 ## API planejada (próximas fases)
 
 - Agente com tool chaining e planejamento (Fase 9).
+- Assistente proativo/voz (STT/TTS) — vivem no cliente Jarvis externo, não no Atlas.

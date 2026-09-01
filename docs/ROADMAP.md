@@ -81,6 +81,20 @@ O Atlas evolui em 10 fases, sempre com base funcional e testada.
       autonomia irrestrita)
 - [x] Migração `0003_agentrun` + 4 testes novos (total 168 verdes)
 
-## FASE 10 — JARVIS
-- Assistente proativo (configurável), voz (STT/TTS), integrações externas,
-  automações, contexto multimodal
+## FASE 10 — COGNITIVE ENGINE + JARVIS API ✅ (implementada)
+- [x] Auth serviço-a-serviço: usuário `service` + `ServiceCredential` (X-API-Key,
+      `svc_...`, rotação/revogação) — JWT permanece para humanos
+- [x] Sessões cognitivas persistentes (`CognitiveSession` + `SessionMessage`):
+      `project_context`, histórico e `POST /api/cognitive/sessions/:id/query/`
+      com resposta estruturada `{answer, sources, classification, provider}`
+- [x] `CognitiveService` read-only (reusa buscar híbrida/grafo/memórias + provider
+      Gemini↔determinístico, fallback), **sem tools** — escritas continuam
+      exigindo aprovação via `ToolProposal`
+- [x] Eventos de integração (`IntegrationEvent`) com whitelist extensível em
+      `apps/cognitive/integration.py` — tipos desconhecidos são rejeitados
+      (anti prompt-injection/extensão implícita)
+- [x] Observabilidade via `AuditLog` (sem secrets) em todas as rotas `COGNITIVE_*`
+      e `INTEGRATION_EVENT`
+- [x] Migração `0001_initial` + 15 testes novos (total **202 verdes**)
+- [ ] Fora de escopo do Atlas: voz (STT/TTS), controle de PC, automações
+      proativas e o próprio agente Jarvis — ficam no cliente externo

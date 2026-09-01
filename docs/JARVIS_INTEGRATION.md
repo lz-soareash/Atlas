@@ -22,12 +22,15 @@ dados que um agente externo deve respeitar.
 
 ### Fluxo de credenciais do cliente externo
 
-O Jarvis não pode compartilhar a sessão do usuário. O padrão recomendado:
+O Jarvis não pode compartilhar a sessão do usuário. Dois padrões:
 
 1. **Em nome do usuário:** usar as credenciais (email/senha) da conta para obter
    tokens via `POST /api/auth/token/` e armazená-los com segurança.
-2. **Em nome próprio (serviço):** futuramente, criar um usuário de serviço dedicado
-   ou credencial de app. (Fora do escopo atual; veja `docs/ROADMAP.md`.)
+2. **Em nome próprio (serviço):** criar um usuário de **tipo `service`** e
+   emitir uma `ServiceCredential` (chave `svc_…`, header **`X-API-Key`**).
+   Indicado para integrações automatizadas (por exemplo, o ato de o Jarvis
+   consultar/no futuro notificar o Atlas) que não devem trafegar credenciais
+   de usuário humano. *(Ver `docs/COGNITIVE_ENGINE.md`.)*
 
 ---
 
@@ -89,6 +92,20 @@ Authorization: Bearer <jwt access>
 
 Erro de autenticação → **401** `{ "detail": "...", "code": "token_not_valid" }`.
 
+### 2.5 Auth de serviço — `X-API-Key` (Fase 10)
+
+Contas de **tipo `service`** autenticam sem JWT, enviando a chave de API:
+```text
+X-API-Key: svc_...
+```
+- A chave é emitida/gerenciada em `POST /api/service-credentials/` (a conta
+  `service` cria e rotaciona as próprias chaves).
+- É sem estado para o cliente (não expira em 60min como o JWT); **revogação**
+  responde na hora via `revoke`.
+- Ausente/Inválida → **401**; os mesmos anti-IDOR, paginação e throttle se aplicam.
+- Contas `service` são **read-only por design** nas rotas que envolvem IA
+  (Cognitive Engine não executa tools de escrita).
+
 ---
 
 ## 3. Permissões e ownership
@@ -100,6 +117,9 @@ Erro de autenticação → **401** `{ "detail": "...", "code": "token_not_valid"
 | Público               | `token/`, `token/refresh/`, `register/`    | anônimo                      |
 | Autenticado (CRUD do usuário) | todas as entidades, dashboard, grafo, search, intelligence | `IsAuthenticated` + owner |
 | Proposta de escrita   | `tools/proposals/`                         | leitura + `approve`/`reject`; **create bloqueado (405)** |
+| Contas de serviço     | `service-credentials/`                     | `IsAuthenticated` (JWT ou X-API-Key) + owner |
+| Cognitive Engine (read-only) | `cognitive/sessions/`, `cognitive/sessions/:id/query/`, `close/` | `IsAuthenticated` (JWT ou X-API-Key) + owner |
+| Eventos de integração | `integration/events/`                      | `IsAuthenticated` (JWT ou X-API-Key) + owner + whitelist |
 
 ### 3.2 Isolamento por owner (anti-IDOR) — REGRA CRÍTICA
 
@@ -230,6 +250,44 @@ Agrega contagens e itens recentes das 6 entidades para o usuário.
 Campos do InboxItem: `id`, `content`, `status`, `kind`, `destination`, `summary`,
 `owner`, `created_at`, `updated_at`. `kind`/`destination`/`summary` são **read-only**
 (gerados pelo classify).
+
+### 5.8 Cognitive Engine + eventos (Fase 10) — *(autenticado, owner)*
+
+| Método | Rota                                        | Descrição                                    |
+|--------|---------------------------------------------|----------------------------------------------|
+| CRUD   | `/service-credentials/`                     | chaves de API de conta `service` (rotate/revoke) |
+| GET/POST | `/cognitive/sessions/`                    | sessões cognitivas persistentes              |
+| GET    | `/cognitive/sessions/:id/`                  | detalhe com histórico (`messages`)           |
+| POST   | `/cognitive/sessions/:id/query/`            | pergunta → resposta estruturada (read-only)  |
+| POST   | `/cognitive/sessions/:id/close/`            | encerra a sessão                             |
+| GET/POST | `/integration/events/`                    | eventos de integração (whitelist)            |
+
+**`POST /api/cognitive/sessions/:id/query/`**
+```json
+{ "query": "o que devo fazer sobre o projeto Atlas?" }
+```
+```json
+{
+  "answer": "...",
+  "sources": [ { "id": "...", "entity": "decision", "label": "Decisão",
+                 "title": "…", "route": "/decisoes", "score": 8.8 } ],
+  "classification": { "kind": "fato", "label": "Fato", "source_based": true },
+  "provider": "gemini" | "deterministic",
+  "semantic_available": true,
+  "session_id": "<uuid>"
+}
+```
+- **Read-only**: o cognitive **não** executa tools de escrita — o Jarvis não pode
+  criar/alterar conteúdo por aqui; escritas seguem exigindo `ToolProposal`
+  aprovação do usuário. Falha de IA → **502**.
+
+**`POST /api/integration/events/`**
+```json
+{ "type": "jarvis.sync_request", "payload": { "since": "2026-08-01" } }
+```
+- `type` precisa estar na whitelist (`jarvis.notify`, `jarvis.sync_request`,
+  `jarvis.status`) de `apps/cognitive/integration.py`; desconhecido → **400**
+  (nada é processado implicitamente). Payload limitado a 100 chaves.
 
 ---
 

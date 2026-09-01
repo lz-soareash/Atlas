@@ -34,4 +34,6 @@ urlpatterns = [
     path("api/", include("apps.assistant.urls")),
     # Fase 8 — Intelligence (inbox, duplicatas, sugestões, gaps)
     path("api/", include("apps.intelligence.urls")),
+    # Fase 10 — Cognitive Engine + Integração Jarvis
+    path("api/", include("apps.cognitive.urls")),
 ]

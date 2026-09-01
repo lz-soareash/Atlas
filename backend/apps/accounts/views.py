@@ -1,4 +1,5 @@
-from rest_framework import generics, permissions, serializers, status
+from rest_framework import generics, mixins, permissions, serializers, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -6,8 +7,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.audit.models import AuditLog
-from .models import User
-from .serializers import RegisterSerializer, UserSerializer
+from .models import ServiceCredential, User
+from .serializers import RegisterSerializer, ServiceCredentialSerializer, UserSerializer
 from .throttles import LoginThrottle
 
 
@@ -86,3 +87,76 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class ServiceCredentialViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Gestão de credenciais de serviço (integração serviço→serviço, Fase 10).
+
+    - GET  /api/accounts/service-credentials/       (lista)
+    - POST /api/accounts/service-credentials/        (cria; retorna a chave UMA vez)
+    - POST /api/accounts/service-credentials/:id/rotate/  (nova chave UMA vez)
+    - POST /api/accounts/service-credentials/:id/revoke/  (revoga)
+
+    A chave em texto puro é exibida apenas na criação/rotação. Nunca é
+    armazenada em claro e nunca é retornada de novo pelo GET.
+    """
+
+    serializer_class = ServiceCredentialSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ServiceCredential.objects.filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        key = ServiceCredential.generate_key()
+        credential = serializer.save(
+            user=request.user,
+            key_hash=ServiceCredential._hash(key),
+            key_hint=ServiceCredential._hint(key),
+        )
+        AuditLog.log(
+            user=request.user,
+            action="SERVICE_CREDENTIAL_CREATE",
+            entity_type="accounts.ServiceCredential",
+            entity_id=str(credential.pk),
+            summary=f"Criação de credencial de serviço '{credential.name}'.",
+        )
+        data = serializer.data.copy()
+        data["key"] = key  # única oportunidade de ver a chave original
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="rotate")
+    def rotate(self, request, pk=None):
+        credential = self.get_object()
+        new_key = ServiceCredential.generate_key()
+        credential.rotate(new_key)
+        AuditLog.log(
+            user=request.user,
+            action="SERVICE_CREDENTIAL_ROTATE",
+            entity_type="accounts.ServiceCredential",
+            entity_id=str(credential.pk),
+            summary=f"Rotação de credencial de serviço '{credential.name}'.",
+        )
+        data = ServiceCredentialSerializer(credential).data
+        data["key"] = new_key  # única oportunidade de ver a nova chave
+        return Response(data)
+
+    @action(detail=True, methods=["post"], url_path="revoke")
+    def revoke(self, request, pk=None):
+        credential = self.get_object()
+        if credential.is_active:
+            credential.revoke()
+            AuditLog.log(
+                user=request.user,
+                action="SERVICE_CREDENTIAL_REVOKE",
+                entity_type="accounts.ServiceCredential",
+                entity_id=str(credential.pk),
+                summary=f"Revogação de credencial de serviço '{credential.name}'.",
+            )
+        return Response(ServiceCredentialSerializer(credential).data)
